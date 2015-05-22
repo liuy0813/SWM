@@ -32,10 +32,10 @@ dy = 1.0;
 nplotstep = 8;           % plot interval
 %ndrops = 5;              % maximum number of drops
 %dropstep = 500;          % drop interval
-a = 2;                  % min size
-b = 4;                  % max size
-height = (b-a).*rand(1,1) + a   % initial drop size
-D = droplet(8,21);     % simulate a water drop (size,???)
+a = 1;                  % min size
+b = 2;                  % max size
+height = (b-a).*rand(1,1) + a;   % initial drop size
+D = droplet(height,21);     % simulate a water drop (size,???)
 
 % Initialize graphics
 
@@ -43,10 +43,10 @@ D = droplet(8,21);     % simulate a water drop (size,???)
 
 
 % Outer loop, restarts.
-max = 2000; % total time
-sample = 200; % max/n where n is desired number of samples
+max = 10000; % total time
+sample = max/max; % max/n where n is desired number of samples
 nstep = 0;
-states = zeros(max/sample,3);
+states = zeros(max/sample,4);
 test_num = 1;
 loc = [16,16]; % grid is 64X64
 
@@ -139,7 +139,7 @@ while nstep < max
    
        %Store H,U,V  
        if mod(nstep,sample) == 0
-           states(test_num,:) = [H(loc(1),loc(2)),U(loc(1),loc(2)),V(loc(1),loc(2))];
+           states(test_num,:) = [nstep,H(loc(1),loc(2)),U(loc(1),loc(2)),V(loc(1),loc(2))];
            test_num = test_num+1;
            
        end
@@ -193,8 +193,8 @@ function [surfplot,top] = initgraphics(n)
    caxis([-1 1])
    shading faceted
    c = (1:64)'/64;
-   cyan = [c c*1/3 c*0];
-   colormap(jet)
+   cyan = [c*0 c c];
+   colormap(winter)
    top = title('Shallow Sea Sim');
 
   return

@@ -23,7 +23,16 @@ states = zeros(10,4,n,m);
 
 end
 
+function ana_state = analysis_state(f_state, k_gain, obs_state)
+ana_state = f_state + k_gain(obs_state - f_state);
+end
 
+function ana_err = analysis_err(ana_state, avg_ens)
+%not sure if this is supposed to be a sum or just one calculation
+%Geir Evenson DA book pg 38
+%Evensen 2003 pdf pg 5
+ana_err = 0;
+end
 
 function P_f = error_forecast(ens_state, obs_state, time)
 %change 1 to 2 if array is formatted differently

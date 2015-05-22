@@ -8,13 +8,10 @@
 % z = # simulation run
 
 n = 5;
-states = zeros(10,3,n);
+states = zeros(1000,4,n);
 
  for i=1:n
      states(:,:,i) =  Shallow_sea_sim();
  end
  
- 
-  for i=1:n
-     states(:,:,i)
- end
+save('OBS_matrix.mat','states')

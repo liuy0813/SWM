@@ -32,8 +32,8 @@ dy = 1.0;
 nplotstep = 8;           % plot interval
 %ndrops = 5;              % maximum number of drops
 %dropstep = 500;          % drop interval
-a = 1;                  % min size
-b = 2;                  % max size
+a = 1.4;                  % min size
+b = 1.6;                  % max size
 height = (b-a).*rand(1,1) + a;   % initial drop size
 D = droplet(height,21);     % simulate a water drop (size,???)
 
@@ -43,7 +43,7 @@ D = droplet(height,21);     % simulate a water drop (size,???)
 
 
 % Outer loop, restarts.
-max = 10000; % total time
+max = 1000; % total time
 sample = max/max; % max/n where n is desired number of samples
 nstep = 0;
 states = zeros(max/sample,4);

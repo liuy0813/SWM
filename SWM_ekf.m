@@ -23,3 +23,24 @@ states = zeros(10,4,n,m);
 
 end
 
+
+
+function P_f = error_forecast(ens_state, obs_state, time)
+%change 1 to 2 if array is formatted differently
+l = size(ens_state,1);
+sum = 0;
+for i = 1: l
+    %do we really raise to the power of time????
+    sum = sum + (ens_state(i)-obs_state)*(ens_state(i)-obs_state)^time;
+end
+avg = sum / l;
+P_f = avg;
+end
+
+function k_gain = get_kalman(f_err, model_err)
+%should model_err be hard coded?
+k_gain = f_err.*(f_err + model_err)^-1;
+end
+
+
+

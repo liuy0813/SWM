@@ -9,7 +9,7 @@ function d=bhattacharyya(X1,X2)
 % Output: d is the Bhattacharyya distance between these two sets of data.
 %
 % Example:
-%{
+%{ 
 N=100;
 M=10;
 e1=2;

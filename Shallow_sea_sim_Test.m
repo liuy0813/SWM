@@ -7,8 +7,8 @@
 % y = h,u,v
 % z = # simulation run
 
-n = 5;
-states = zeros(1000,4,n);
+n = 100;
+states = zeros(10000,4,n);
 
  for i=1:n
      states(:,:,i) =  Shallow_sea_sim();

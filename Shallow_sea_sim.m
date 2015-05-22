@@ -1,4 +1,4 @@
-function [states] = waterwave ( )
+function [states] = waterwave (Drop_height, time)
 
 % WATER WAVE
 % 2D Shallow Water Model
@@ -35,7 +35,7 @@ nplotstep = 8;           % plot interval
 a = 1.4;                  % min size
 b = 1.6;                  % max size
 height = (b-a).*rand(1,1) + a;   % initial drop size
-D = droplet(height,21);     % simulate a water drop (size,???)
+D = droplet(Drop_height,21);     % simulate a water drop (size,???)
 
 % Initialize graphics
 
@@ -43,8 +43,8 @@ D = droplet(height,21);     % simulate a water drop (size,???)
 
 
 % Outer loop, restarts.
-max = 1000; % total time
-sample = max/max; % max/n where n is desired number of samples
+max = time; % total time
+sample = max/10; % max/n where n is desired number of samples
 nstep = 0;
 states = zeros(max/sample,4);
 test_num = 1;

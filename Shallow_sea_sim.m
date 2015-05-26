@@ -38,11 +38,14 @@ dy = 1.0;
 nplotstep = 8;           % plot interval
 %ndrops = 5;              % maximum number of drops
 %dropstep = 500;          % drop interval
+
+D = zeros(num_runs,1);  % create empty array for different drops
+for i = 1 : num_runs
 a = 1.4;                  % min size
 b = 1.6;                  % max size
 height = (b-a).*rand(1,1) + a;   % initial drop size
-D = droplet(height,21);     % simulate a water drop (size,???)
-
+D(i) = droplet(height,21);     % simulate a water drop (size,???)
+end
 % Initialize graphics
 
 % [surfplot,top] = initgraphics(n);
@@ -85,10 +88,10 @@ while nstep < max
        % initialize water drops
        for k = 1 : num_runs
        if nstep < 2;
-           w = size(D,1);
+           w = size(D(k),1);
            i = 5 +(1:w);
            j = 5 +(1:w);
-           H(i,j,k) = H(i,j,k) + 0.5*D;
+           H(i,j,k) = H(i,j,k) + 0.5*D(k);
        end
        
        % Reflective boundary conditions

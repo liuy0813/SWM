@@ -1,4 +1,4 @@
-function [states] = waterwave (Drop_height, time)
+function [states] = waterwave () %Drop_height, time
 
 % WATER WAVE
 % 2D Shallow Water Model
@@ -13,7 +13,7 @@ function [states] = waterwave (Drop_height, time)
 %
 %  Author:
 %
-%    Cleve Moler
+%    Tyler Welch
 %
 %  Reference:
 %
@@ -23,6 +23,9 @@ function [states] = waterwave (Drop_height, time)
 %    http://www.amath.washington.edu/~claw/applications/shallow/www
 
 % Parameters
+
+% define conditions of ensamble
+num_runs = 10;
 
 n = 64;                  % grid size
 g = 9.8;                 % gravitational constant
@@ -35,18 +38,18 @@ nplotstep = 8;           % plot interval
 a = 1.4;                  % min size
 b = 1.6;                  % max size
 height = (b-a).*rand(1,1) + a;   % initial drop size
-D = droplet(Drop_height,21);     % simulate a water drop (size,???)
+D = droplet(height,21);     % simulate a water drop (size,???)
 
 % Initialize graphics
 
-[surfplot,top] = initgraphics(n);
+% [surfplot,top] = initgraphics(n);
 
 
 % Outer loop, restarts.
-max = time; % total time
+max = 1000; % total time
 sample = max/10; % max/n where n is desired number of samples
 nstep = 0;
-states = zeros(max/sample,4);
+states = zeros(10,4,num_runs);
 test_num = 1;
 loc = [16,16]; % grid is 64X64
 
@@ -56,32 +59,40 @@ loc = [16,16]; % grid is 64X64
 % Varray = zeros(max,1);
 % Harray = zeros(max,1);
 
+
+
 while nstep < max
+    
+   % Create ensamble of zeros here
    
-   H = ones(n+2,n+2);   U = zeros(n+2,n+2);  V = zeros(n+2,n+2);
-   Hx = zeros(n+1,n+1); Ux = zeros(n+1,n+1); Vx = zeros(n+1,n+1);
-   Hy = zeros(n+1,n+1); Uy = zeros(n+1,n+1); Vy = zeros(n+1,n+1);
+
+   H = ones(n+2,n+2,num_runs);   U = zeros(n+2,n+2,num_runs);  V  = zeros(n+2,n+2,num_runs);
+   Hx  = zeros(n+1,n+1,num_runs); Ux  = zeros(n+1,n+1,num_runs); Vx  = zeros(n+1,n+1,num_runs);
+   Hy  = zeros(n+1,n+1,num_runs); Uy  = zeros(n+1,n+1,num_runs); Vy  = zeros(n+1,n+1,num_runs);
+  
+   
    %ndrop = ceil(rand*ndrops);
      nstep = 0;
 
    % Inner loop, time steps.
 
    while nstep < max
-       nstep = nstep + 1;
+       nstep = nstep + 1
 
        % initialize water drops
+       for k = 1 : num_runs
        if nstep < 2;
            w = size(D,1);
            i = 5 +(1:w);
            j = 5 +(1:w);
-           H(i,j) = H(i,j) + 0.5*D;
+           H(i,j,k) = H(i,j,k) + 0.5*D;
        end
-     
+       
        % Reflective boundary conditions
-       H(:,1) = H(:,2);      U(:,1) = U(:,2);       V(:,1) = -V(:,2);
-       H(:,n+2) = H(:,n+1);  U(:,n+2) = U(:,n+1);   V(:,n+2) = -V(:,n+1);
-       H(1,:) = H(2,:);      U(1,:) = -U(2,:);      V(1,:) = V(2,:);
-       H(n+2,:) = H(n+1,:);  U(n+2,:) = -U(n+1,:);  V(n+2,:) = V(n+1,:);
+       H(:,1,k) = H(:,2,k);      U(:,1,k) = U(:,2,k);       V(:,1,k) = -V(:,2,k);
+       H(:,n+2,k) = H(:,n+1,k);  U(:,n+2,k) = U(:,n+1,k);   V(:,n+2,k) = -V(:,n+1,k);
+       H(1,:,k) = H(2,:,k);      U(1,:,k) = -U(2,:,k);      V(1,:,k) = V(2,:,k);
+       H(n+2,:,k) = H(n+1,:,k);  U(n+2,:,k) = -U(n+1,:,k);  V(n+2,:,k) = V(n+1,:,k);
 
        %% Take a half time step to estimate derivatives at middle time.
    
@@ -90,33 +101,33 @@ while nstep < max
        j = 1:n;
    
        % height
-       Hx(i,j) = (H(i+1,j+1)+H(i,j+1))/2 - dt/(2*dx)*(U(i+1,j+1)-U(i,j+1));
+       Hx(i,j,k) = (H(i+1,j+1,k)+H(i,j+1,k))/2 - dt/(2*dx)*(U(i+1,j+1,k)-U(i,j+1,k));
    
        % x momentum
-       Ux(i,j) = (U(i+1,j+1)+U(i,j+1))/2 -  ...
-                 dt/(2*dx)*((U(i+1,j+1).^2./H(i+1,j+1) + g/2*H(i+1,j+1).^2) - ...
-                            (U(i,j+1).^2./H(i,j+1) + g/2*H(i,j+1).^2));
+       Ux(i,j,k) = (U(i+1,j+1,k)+U(i,j+1,k))/2 -  ...
+                 dt/(2*dx)*((U(i+1,j+1,k).^2./H(i+1,j+1,k) + g/2*H(i+1,j+1,k).^2) - ...
+                            (U(i,j+1,k).^2./H(i,j+1,k) + g/2*H(i,j+1,k).^2));
    
        % y momentum
-       Vx(i,j) = (V(i+1,j+1)+V(i,j+1))/2 - ...
-                 dt/(2*dx)*((U(i+1,j+1).*V(i+1,j+1)./H(i+1,j+1)) - ...
-                            (U(i,j+1).*V(i,j+1)./H(i,j+1)));     
+       Vx(i,j,k) = (V(i+1,j+1,k)+V(i,j+1,k))/2 - ...
+                 dt/(2*dx)*((U(i+1,j+1,k).*V(i+1,j+1,k)./H(i+1,j+1,k)) - ...
+                            (U(i,j+1,k).*V(i,j+1,k)./H(i,j+1,k)));     
                         
        % y direction
        i = 1:n;
        j = 1:n+1;
    
        % height
-       Hy(i,j) = (H(i+1,j+1)+H(i+1,j))/2 - dt/(2*dy)*(V(i+1,j+1)-V(i+1,j));
+       Hy(i,j,k) = (H(i+1,j+1,k)+H(i+1,j,k))/2 - dt/(2*dy)*(V(i+1,j+1,k)-V(i+1,j,k));
    
        % x momentum
-       Uy(i,j) = (U(i+1,j+1)+U(i+1,j))/2 - ...
-                 dt/(2*dy)*((V(i+1,j+1).*U(i+1,j+1)./H(i+1,j+1)) - ...
-                            (V(i+1,j).*U(i+1,j)./H(i+1,j)));
+       Uy(i,j,k) = (U(i+1,j+1,k)+U(i+1,j,k))/2 - ...
+                 dt/(2*dy)*((V(i+1,j+1,k).*U(i+1,j+1,k)./H(i+1,j+1,k)) - ...
+                            (V(i+1,j,k).*U(i+1,j,k)./H(i+1,j,k)));
        % y momentum
-       Vy(i,j) = (V(i+1,j+1)+V(i+1,j))/2 - ...
-                 dt/(2*dy)*((V(i+1,j+1).^2./H(i+1,j+1) + g/2*H(i+1,j+1).^2) - ...
-                            (V(i+1,j).^2./H(i+1,j) + g/2*H(i+1,j).^2));
+       Vy(i,j,k) = (V(i+1,j+1,k)+V(i+1,j,k))/2 - ...
+                 dt/(2*dy)*((V(i+1,j+1,k).^2./H(i+1,j+1,k) + g/2*H(i+1,j+1,k).^2) - ...
+                            (V(i+1,j,k).^2./H(i+1,j,k) + g/2*H(i+1,j,k).^2));
    
        %% Now take a full step that uses derivatives at middle point.
 
@@ -124,36 +135,39 @@ while nstep < max
        j = 2:n+1;
    
        % height
-       H(i,j) = H(i,j) - (dt/dx)*(Ux(i,j-1)-Ux(i-1,j-1)) - ...
-                         (dt/dy)*(Vy(i-1,j)-Vy(i-1,j-1));
+       H(i,j,k) = H(i,j,k) - (dt/dx)*(Ux(i,j-1,k)-Ux(i-1,j-1,k)) - ...
+                         (dt/dy)*(Vy(i-1,j,k)-Vy(i-1,j-1,k));
        % x momentum
-       U(i,j) = U(i,j) - (dt/dx)*((Ux(i,j-1).^2./Hx(i,j-1) + g/2*Hx(i,j-1).^2) - ...
-                         (Ux(i-1,j-1).^2./Hx(i-1,j-1) + g/2*Hx(i-1,j-1).^2)) ...
-                       - (dt/dy)*((Vy(i-1,j).*Uy(i-1,j)./Hy(i-1,j)) - ...
-                         (Vy(i-1,j-1).*Uy(i-1,j-1)./Hy(i-1,j-1)));
+       U(i,j,k) = U(i,j,k) - (dt/dx)*((Ux(i,j-1,k).^2./Hx(i,j-1,k) + g/2*Hx(i,j-1,k).^2) - ...
+                         (Ux(i-1,j-1,k).^2./Hx(i-1,j-1,k) + g/2*Hx(i-1,j-1,k).^2)) ...
+                       - (dt/dy)*((Vy(i-1,j,k).*Uy(i-1,j,k)./Hy(i-1,j,k)) - ...
+                         (Vy(i-1,j-1,k).*Uy(i-1,j-1,k)./Hy(i-1,j-1,k)));
        % y momentum
-       V(i,j) = V(i,j) - (dt/dx)*((Ux(i,j-1).*Vx(i,j-1)./Hx(i,j-1)) - ...
-                         (Ux(i-1,j-1).*Vx(i-1,j-1)./Hx(i-1,j-1))) ...
-                       - (dt/dy)*((Vy(i-1,j).^2./Hy(i-1,j) + g/2*Hy(i-1,j).^2) - ...
-                         (Vy(i-1,j-1).^2./Hy(i-1,j-1) + g/2*Hy(i-1,j-1).^2));
+       V(i,j,k) = V(i,j,k) - (dt/dx)*((Ux(i,j-1,k).*Vx(i,j-1,k)./Hx(i,j-1,k)) - ...
+                         (Ux(i-1,j-1,k).*Vx(i-1,j-1,k)./Hx(i-1,j-1,k))) ...
+                       - (dt/dy)*((Vy(i-1,j,k).^2./Hy(i-1,j,k) + g/2*Hy(i-1,j,k).^2) - ...
+                         (Vy(i-1,j-1,k).^2./Hy(i-1,j-1,k) + g/2*Hy(i-1,j-1,k).^2));
    
        %Store H,U,V  
+       
+       
+       
        if mod(nstep,sample) == 0
-           states(test_num,:) = [nstep,H(loc(1),loc(2)),U(loc(1),loc(2)),V(loc(1),loc(2))];
-           test_num = test_num+1;
+           states(nstep/sample,:,k) = [nstep,H(loc(1),loc(2)),U(loc(1),loc(2)),V(loc(1),loc(2))];
            
+       end
        end
 
        % Update plot
-       if mod(nstep,nplotstep) == 0
-          C = abs(U(i,j)) + abs(V(i,j));  % Color shows momemtum
-          t = nstep*dt;
-          tv = norm(C,'fro');   
-          set(surfplot,'zdata',H(i,j),'cdata',C);
-          set(top,'string',sprintf('Drop Size = %6.2f',height)) % t = %6.2f, tv = %6.2f
-          drawnow
-       end
-      
+%        if mod(nstep,nplotstep) == 0
+%           C = abs(U(i,j)) + abs(V(i,j));  % Color shows momemtum
+%           t = nstep*dt;
+%           tv = norm(C,'fro');   
+%           set(surfplot,'zdata',H(i,j),'cdata',C);
+%           set(top,'string',sprintf('Drop Size = %6.2f',height)) % t = %6.2f, tv = %6.2f
+%           drawnow
+%        end
+%       
        if all(all(isnan(H))), break, end  % Unstable, restart
    end
 end
@@ -194,7 +208,7 @@ function [surfplot,top] = initgraphics(n)
    shading faceted
    c = (1:64)'/64;
    cyan = [c*0 c c];
-   colormap(winter)
+   colormap(hsv)
    top = title('Shallow Sea Sim');
 
   return

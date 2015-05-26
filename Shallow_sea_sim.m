@@ -13,7 +13,10 @@ function [states] = waterwave () %Drop_height, time
 %
 %  Author:
 %
-%    Tyler Welch
+%    Cleve Moler
+%
+% Edited by:
+% Carl Rodriguez, Tyler Welch
 %
 %  Reference:
 %

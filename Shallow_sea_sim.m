@@ -162,12 +162,39 @@ while nstep < max
        %Store H,U,V  
        
        
-       
+       % This determines EnKF sample time
        if mod(nstep,sample) == 0
+
            states(nstep/sample,:,k) = [nstep,H(loc(1),loc(2),k),U(loc(1),loc(2),k),V(loc(1),loc(2),k)];
            
        end
        end
+        
+       if(mod(nstep,sample) == 0)
+           %make avg matrix for state - all 3 variables for all x,y
+           ens_avg = get_ens_avg(H,U,V);
+           obs = get_obs(nstep,0); %update to change error
+           
+           %generate errors
+           ens_err = get_ens_err(H,U,V,ens_avg,nstep);
+           obs_err = get_obs_err(0);
+           
+           %calc kalman gain
+           k_gain = get_k_gain(ens_err,obs_err);
+           
+           %ofset ens_avg
+           analysis_change = get_ana_chng(ens_avg,obs,k_gain);
+           
+           %update state
+           update_ens(analysis_change,H,U,V);
+           
+       end
+           
+          
+           %get observation matrix for current time - with error
+           %Get analysis result 
+           %Either reinitialize all ensemble results from analysis result
+
 
        % Update plot
 %        if mod(nstep,nplotstep) == 0
@@ -224,3 +251,89 @@ function [surfplot,top] = initgraphics(n)
 
   return
 end
+function ens_sum = get_ens_sum(H,U,V)
+    sum_mat = zeros(64,64,3);
+    ensemble = size(H,3);
+    
+    for i=1:ensemble 
+       for x=1:64
+           for y = 1:64
+              sum_mat(x,y,1) = sum_mat(x,y,1) + H(x,y,i);
+              sum_mat(x,y,2) = sum_mat(x,y,2) + U(x,y,i);
+              sum_mat(x,y,3) = sum_mat(x,y,3) + V(x,y,i);
+           end
+       end
+    end
+    ens_sum = sum_mat
+end
+function avg = get_ens_avg(H,U,V)
+    ensemble = siez(H,3)
+    avg = get_ens_sum(H,U,V) ./ ensemble;
+end
+
+function obs = get_obs(time,error)
+ensemble_num = 100 %MAGIC NUMBER
+sum = zeros(64,64,3)
+file = fopen('OBS_matric.mat');
+for x=1:64
+    for y=1:64
+        for data=1:3
+            for run = 1:ensemble_num 
+                sum(x,y,data) = sum(x,y,data)+file(x,y,time,data,run)
+            end
+        end
+    end
+end
+avg = sum ./ ennsemble_num;
+%do errror
+obs = avg       
+end
+
+function error_ens = get_ens_err(H,U,V,ens_sum,T)
+total_err = zeros(64,64,3);
+ensemble = size(H,3);
+    for i=1:ensemble 
+       for x=1:64
+           for y = 1:64
+              total_err(x,y,1) = total_err(x,y,1) + (H(x,y,i) - ens_sum(x,y,1))...
+                  .*(H(x,y,1) - ens_sum(x,y,1))^T;
+              
+              total_err(x,y,2) = total_err(x,y,2) + (U(x,y,i) - ens_sum(x,y,2))...
+                  .*(H(x,y,i) - ens_sum(x,y,2))^T;
+              
+              total_err(x,y,3) = total_err(x,y,3) + (V(x,y,i) - ens_sum(x,y,3))...
+                  .*(H(x,y,i) - ens_sum(x,y,3))^T;
+           end
+       end
+    end
+error_ens = total_err/(ensemble-1);
+end
+
+function obs_err = get_obs_err(input)
+obs_err = eye(3) %we don't know what to do here
+end
+
+function k_gain = get_k_gain(ens_err, obs_err)
+H = eye(3)
+k_gain = ens_err * H(H*ens_err*H'+obs_err)^-1 %what is H^t
+end
+
+function analysis_change = get_ana_chng(ens_avg,obs,k_gain)
+
+analysis_change =k_gain(obs - ens_avg);
+end
+
+function update_ens(ana_chng,H,U,V)
+ensemble = size(H,3);
+    for i=1:ensemble 
+       for x=1:64
+           for y = 1:64
+              H(x,y,i) = H(x,y,i) + ana_chng(x,y,1);
+              U(x,y,i) = U(x,y,i) + ana_chng(x,y,2);
+              V(x,y,i) = V(x,y,i) + ana_chng(x,y,3);
+           end
+       end
+    end
+    
+end
+

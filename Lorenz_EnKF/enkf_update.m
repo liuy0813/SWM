@@ -1,5 +1,12 @@
 
 function [xam,Xap] = enkf_update(xbm, Xbp, Y, H, R, loc)
+%Inputs
+%  Xbp = ensemble of states
+% xam = ensemble mean
+% H identity function
+% R model Error matrix
+% Y is somthing! (prior guess)
+
 
 %
 % Originator: G.J. Hakim, University of Washington

@@ -23,7 +23,7 @@
 clear all
 randn('state',0); % insure the same sequence of random numbers
 
-update = 1;     % DA method (1= perturbed obs; 2= potter, 3=EnKF)
+update = 3;     % DA method (1= perturbed obs; 2= potter, 3=EnKF)
 tavg = 0;       % time averaged observations (0 = no; 1 = yes)
 q = .001;       % model error variance (covariance model is white for now)
 R = eye(3)*1e-2;% observation error covariance

@@ -274,12 +274,12 @@ end
 function obs = get_obs(time,error)
 ensemble_num = 100 %MAGIC NUMBER
 sum = zeros(64,64,3)
-file = fopen('OBS_matric.mat');
+file = fopen('REF_matrix.mat');
 for x=1:64
     for y=1:64
         for data=1:3
             for run = 1:ensemble_num 
-                sum(x,y,data) = sum(x,y,data)+file(x,y,time,data,run)
+                sum(x,y,data) = sum(x,y,data)+file(run,time,x,y,data)
             end
         end
     end

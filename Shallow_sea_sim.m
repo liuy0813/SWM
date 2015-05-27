@@ -39,12 +39,13 @@ nplotstep = 8;           % plot interval
 %ndrops = 5;              % maximum number of drops
 %dropstep = 500;          % drop interval
 
-D = zeros(num_runs,1);  % create empty array for different drops
+drop_dim = 21;
+D = zeros(21,21,num_runs);  % create empty array for different drops
 for i = 1 : num_runs
-a = 1.4;                  % min size
-b = 1.6;                  % max size
+a = 1;                  % min size
+b = 8;                  % max size
 height = (b-a).*rand(1,1) + a;   % initial drop size
-D(i) = droplet(height,21);     % simulate a water drop (size,???)
+D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
 end
 % Initialize graphics
 
@@ -52,7 +53,7 @@ end
 
 
 % Outer loop, restarts.
-max = 1000; % total time
+max = 500; % total time
 sample = max/10; % max/n where n is desired number of samples
 nstep = 0;
 states = zeros(10,4,num_runs);
@@ -83,15 +84,19 @@ while nstep < max
    % Inner loop, time steps.
 
    while nstep < max
-       nstep = nstep + 1
-
+       nstep = nstep + 1;
+       
+       % Debugging code!!!
+       if mod(nstep, 100) == 0
+           nstep
+       end
        % initialize water drops
        for k = 1 : num_runs
-       if nstep < 2;
-           w = size(D(k),1);
+       if nstep == 1;
+           w = size(D(:,:,k),1);
            i = 5 +(1:w);
            j = 5 +(1:w);
-           H(i,j,k) = H(i,j,k) + 0.5*D(k);
+           H(i,j,k) = H(i,j,k) + 0.5*D(:,:,k);
        end
        
        % Reflective boundary conditions
@@ -159,7 +164,7 @@ while nstep < max
        
        
        if mod(nstep,sample) == 0
-           states(nstep/sample,:,k) = [nstep,H(loc(1),loc(2)),U(loc(1),loc(2)),V(loc(1),loc(2))];
+           states(nstep/sample,:,k) = [nstep,H(loc(1),loc(2),k),U(loc(1),loc(2),k),V(loc(1),loc(2),k)];
            
        end
        end

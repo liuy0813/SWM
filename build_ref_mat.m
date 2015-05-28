@@ -1,7 +1,9 @@
-function ref_mat = build_ref_mat(ens,time)
+function [ref_mat,runtime] = build_ref_mat(ens,time)
 
 ref_mat = zeros(ens,time,64,64,3);
 
+% timing array
+runtime = 0;
 
 n = 64;                  % grid size
 g = 9.8;                 % gravitational constant
@@ -35,8 +37,9 @@ loc = [1:64,1:64]; % grid is 64X64
 % Varray = zeros(max,1);
 % Harray = zeros(max,1);
 
-
-
+%Start timer
+Tstart = tic;
+fprintf('building matrix... \n');
 while nstep < max
     
    % Create ensamble of zeros here
@@ -55,10 +58,11 @@ while nstep < max
    while nstep < max
        nstep = nstep + 1;
        
-       % Debugging code!!!
+       % Output progress message every 100 steps
        if mod(nstep, 100) == 0
-           nstep
+          fprintf('Number of step: %d   Time: %2.5f \n', nstep, toc(Tstart))
        end
+       
        % initialize water drops
        for k = 1 : ens
        if nstep == 1;
@@ -131,7 +135,7 @@ while nstep < max
        %Store H,U,V  
        
        
-       % This determines EnKF sample time
+       % Save ref_mat
        if mod(nstep,sample) == 0
 
            ref_mat(k,nstep,:,:,1) = H(loc(1),loc(2),k);
@@ -148,8 +152,15 @@ while nstep < max
        end
   end
 end
+% % stop timer
+% runtime = toc(Tstart);
+% fprintf('Total time: %2.5f', runtime);
+
+% save matrix
 save('REF_matrix.mat','ref_mat')
 end
+
+
 
   
 % ------------------------------------

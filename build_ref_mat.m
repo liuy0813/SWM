@@ -1,4 +1,4 @@
-function [ref_mat,runtime] = build_ref_mat(ens,time)
+function build_ref_mat(ens,time)
 
 ref_mat = zeros(ens,time,64,64,3);
 
@@ -10,14 +10,12 @@ g = 9.8;                 % gravitational constant
 dt = 0.02;               % hardwired timestep
 dx = 1.0;
 dy = 1.0; 
-%ndrops = 5;              % maximum number of drops
-%dropstep = 500;          % drop interval
 
 drop_dim = 21;
 D = zeros(21,21,ens);  % create empty array for different drops
 for i = 1 : ens
-a = 1;                  % min size
-b = 8;                  % max size
+a = 1.45;                  % min size
+b = 1.55;                  % max size
 height = (b-a).*rand(1,1) + a;   % initial drop size
 D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
 end
@@ -43,8 +41,6 @@ fprintf('building matrix... \n');
 while nstep < max
     
    % Create ensamble of zeros here
-   
-
    H = ones(n+2,n+2,ens);   U = zeros(n+2,n+2,ens);  V  = zeros(n+2,n+2,ens);
    Hx  = zeros(n+1,n+1,ens); Ux  = zeros(n+1,n+1,ens); Vx  = zeros(n+1,n+1,ens);
    Hy  = zeros(n+1,n+1,ens); Uy  = zeros(n+1,n+1,ens); Vy  = zeros(n+1,n+1,ens);
@@ -61,6 +57,8 @@ while nstep < max
        % Output progress message every 100 steps
        if mod(nstep, 100) == 0
           fprintf('Number of step: %d   Time: %2.5f \n', nstep, toc(Tstart))
+       elseif (nstep <= 5)
+           fprintf('Number of step: %d   Time: %2.5f \n', nstep, toc(Tstart))
        end
        
        % initialize water drops
@@ -178,11 +176,3 @@ function D = droplet ( height, width )
 end
 % ------------------------------------
 
-% n = 100;
-% states = zeros(10000,4,n);
-% 
-%  for i=1:n
-%      states(:,:,i) =  Shallow_sea_sim();
-%  end
-%  
-% save('OBS_matrix.mat','states')

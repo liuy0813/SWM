@@ -279,7 +279,7 @@ for x=1:64
     for y=1:64
         for data=1:3
             for run = 1:ensemble_num 
-                sum(x,y,data) = sum(x,y,data)+file(x,y,time,data,run)
+                sum(x,y,data) = sum(x,y,data)+file(run,time,x,y,data)
             end
         end
     end

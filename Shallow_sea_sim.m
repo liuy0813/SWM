@@ -264,15 +264,16 @@ end
 function ens_sum = get_ens_sum(H,U,V)
 sum_mat = zeros(64,64,3);
 ensemble = size(H,3);
-for x = 1:64
-    for y = 1:64
+x = 1:64;
+y=1:64;
+xR = 2:65;
+yR=2:65;
         for i=1:ensemble
-            sum_mat(x,y,1) = sum_mat(x,y,1) + H(x,y,i);
-            sum_mat(x,y,2) = sum_mat(x,y,2) + U(x,y,i);
-            sum_mat(x,y,3) = sum_mat(x,y,3) + V(x,y,i);
+            sum_mat(x,y,1) = sum_mat(x,y,1) + H(xR,yR,i);
+            sum_mat(x,y,2) = sum_mat(x,y,2) + U(xR,yR,i);
+            sum_mat(x,y,3) = sum_mat(x,y,3) + V(xR,yR,i);
         end
-    end
-end
+
 ens_sum = sum_mat;
 end
 

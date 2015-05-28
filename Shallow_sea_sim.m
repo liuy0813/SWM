@@ -16,7 +16,9 @@ function [states] = waterwave () %Drop_height, time
 %    Cleve Moler
 %
 % Edited by:
-% Carl Rodriguez, Tyler Welch
+%
+% Carl Rodriguez, Tyler Welch 
+%(Willamette University, NSF research)
 %
 %  Reference:
 %
@@ -267,7 +269,7 @@ function ens_sum = get_ens_sum(H,U,V)
     ens_sum = sum_mat
 end
 function avg = get_ens_avg(H,U,V)
-    ensemble = siez(H,3)
+    ensemble = size(H,3)
     avg = get_ens_sum(H,U,V) ./ ensemble;
 end
 

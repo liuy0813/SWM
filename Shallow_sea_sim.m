@@ -176,27 +176,27 @@ while nstep < max
         
         if(mod(nstep,sample) == 0)
             
-%             %make avg matrix for state - all 3 variables for all x,y
-%             Tstart = tic
-%             ens_avg = get_ens_avg(H,U,V);
-%             obs = get_obs(nstep,0); %update to change error
-%             t1 = toc(Tstart)
-%             
-%             %generate errors
-%             ens_err = get_ens_err(H,U,V,ens_avg,nstep);
-%             obs_err = get_obs_err(0);
-%             t2 = toc(Tstart)
-%             
-%             %calc kalman gain
-%             k_gain = get_k_gain(ens_err,obs_err);
-%             t3 = toc(Tstart)
-%             %ofset ens_avg
-%             analysis_change = get_ana_chng(ens_avg,obs,k_gain);
-%             t4 = toc(Tstart)
-%             
-%             %update state
-%             update_ens(analysis_change,H,U,V);
-%             t2 = toc(Tstart)
+            %             %make avg matrix for state - all 3 variables for all x,y
+            %             Tstart = tic
+            %             ens_avg = get_ens_avg(H,U,V);
+            %             obs = get_obs(nstep,0); %update to change error
+            %             t1 = toc(Tstart)
+            %
+            %             %generate errors
+            %             ens_err = get_ens_err(H,U,V,ens_avg,nstep);
+            %             obs_err = get_obs_err(0);
+            %             t2 = toc(Tstart)
+            %
+            %             %calc kalman gain
+            %             k_gain = get_k_gain(ens_err,obs_err);
+            %             t3 = toc(Tstart)
+            %             %ofset ens_avg
+            %             analysis_change = get_ana_chng(ens_avg,obs,k_gain);
+            %             t4 = toc(Tstart)
+            %
+            %             %update state
+            %             update_ens(analysis_change,H,U,V);
+            %             t2 = toc(Tstart)
             fprintf('Starting analysis at %d \n',nstep)
             fprintf('Building huge\n')
             huge = zeros(12288,ens_num);
@@ -210,14 +210,14 @@ while nstep < max
                     end
                 end
             end
-            fprintf('Building d\n') 
+            fprintf('Building d\n')
             d = zeros(12288,1);
             fprintf('Building y\n')
             Y = zeros(12288,ens_num);
             fprintf('Starting naive\n')
             a = naive_ana(huge,d,Y);
             fprintf('Done %d\n',nstep)
-
+            
             
         end
         
@@ -289,7 +289,7 @@ ens = size(A,2); %number of ensembles
 
 fprintf('Creating H \n')
 H = eye(n,n);
-In(1:ens,1:ens) = 1/n; 
+In(1:ens,1:ens) = 1/n;
 fprintf('Creating ab\n')
 Ab = A*In;
 fprintf('Creating ap\n')

@@ -30,7 +30,7 @@ function [states] = waterwave () %Drop_height, time
 % Parameters
 
 % define conditions of ensamble
-num_runs = 10;
+ens_num = 10;
 
 n = 64;                  % grid size
 g = 9.8;                 % gravitational constant
@@ -42,8 +42,8 @@ nplotstep = 8;           % plot interval
 %dropstep = 500;          % drop interval
 
 drop_dim = 21;
-D = zeros(21,21,num_runs);  % create empty array for different drops
-for i = 1 : num_runs
+D = zeros(21,21,ens_num);  % create empty array for different drops
+for i = 1 : ens_num
     a = 1;                  % min size
     b = 8;                  % max size
     height = (b-a).*rand(1,1) + a;   % initial drop size
@@ -58,7 +58,7 @@ end
 max = 200; % total time
 sample = max/10; % max/n where n is desired number of samples
 nstep = 0;
-states = zeros(10,4,num_runs);
+states = zeros(10,4,ens_num);
 test_num = 1;
 loc = [16,16]; % grid is 64X64
 
@@ -75,9 +75,9 @@ while nstep < max
     % Create ensamble of zeros here
     
     
-    H = ones(n+2,n+2,num_runs);   U = zeros(n+2,n+2,num_runs);  V  = zeros(n+2,n+2,num_runs);
-    Hx  = zeros(n+1,n+1,num_runs); Ux  = zeros(n+1,n+1,num_runs); Vx  = zeros(n+1,n+1,num_runs);
-    Hy  = zeros(n+1,n+1,num_runs); Uy  = zeros(n+1,n+1,num_runs); Vy  = zeros(n+1,n+1,num_runs);
+    H = ones(n+2,n+2,ens_num);   U = zeros(n+2,n+2,ens_num);  V  = zeros(n+2,n+2,ens_num);
+    Hx  = zeros(n+1,n+1,ens_num); Ux  = zeros(n+1,n+1,ens_num); Vx  = zeros(n+1,n+1,ens_num);
+    Hy  = zeros(n+1,n+1,ens_num); Uy  = zeros(n+1,n+1,ens_num); Vy  = zeros(n+1,n+1,ens_num);
     
     
     %ndrop = ceil(rand*ndrops);
@@ -95,7 +95,7 @@ while nstep < max
             fprintf('Current run: %d \n',nstep)
         end
         % initialize water drops
-        for k = 1 : num_runs
+        for k = 1 : ens_num
             if nstep == 1;
                 w = size(D(:,:,k),1);
                 i = 5 +(1:w);
@@ -175,27 +175,49 @@ while nstep < max
         end
         
         if(mod(nstep,sample) == 0)
-            %make avg matrix for state - all 3 variables for all x,y
-            Tstart = tic
-            ens_avg = get_ens_avg(H,U,V);
-            obs = get_obs(nstep,0); %update to change error
-            t1 = toc(Tstart)
             
-            %generate errors
-            ens_err = get_ens_err(H,U,V,ens_avg,nstep);
-            obs_err = get_obs_err(0);
-            t2 = toc(Tstart)
-            
-            %calc kalman gain
-            k_gain = get_k_gain(ens_err,obs_err);
-            t3 = toc(Tstart)
-            %ofset ens_avg
-            analysis_change = get_ana_chng(ens_avg,obs,k_gain);
-            t4 = toc(Tstart)
-            
-            %update state
-            update_ens(analysis_change,H,U,V);
-            t2 = toc(Tstart)
+%             %make avg matrix for state - all 3 variables for all x,y
+%             Tstart = tic
+%             ens_avg = get_ens_avg(H,U,V);
+%             obs = get_obs(nstep,0); %update to change error
+%             t1 = toc(Tstart)
+%             
+%             %generate errors
+%             ens_err = get_ens_err(H,U,V,ens_avg,nstep);
+%             obs_err = get_obs_err(0);
+%             t2 = toc(Tstart)
+%             
+%             %calc kalman gain
+%             k_gain = get_k_gain(ens_err,obs_err);
+%             t3 = toc(Tstart)
+%             %ofset ens_avg
+%             analysis_change = get_ana_chng(ens_avg,obs,k_gain);
+%             t4 = toc(Tstart)
+%             
+%             %update state
+%             update_ens(analysis_change,H,U,V);
+%             t2 = toc(Tstart)
+            fprintf('Starting analysis at %d \n',nstep)
+            fprintf('Building huge\n')
+            huge = zeros(12288,ens_num);
+            for run = 1:ens_num
+                fprintf('Adding ens_num %d to huge\n',run)
+                for x = 1:64
+                    for y = 1:64
+                        huge((x-1)*64+y,run) = H(x,y,run);
+                        huge((x-1)*64+y+1,run) = U(x,y,run);
+                        huge((x-1)*64+y+2,run) = V(x,y,run);
+                    end
+                end
+            end
+            fprintf('Building d\n') 
+            d = zeros(12288,1);
+            fprintf('Building y\n')
+            Y = zeros(12288,ens_num);
+            fprintf('Starting naive\n')
+            a = naive_ana(huge,d,Y);
+            fprintf('Done %d\n',nstep)
+
             
         end
         
@@ -261,6 +283,28 @@ top = title('Shallow Sea Sim');
 return
 end
 
+function dumb = naive_ana(A, d, Y)
+n = size(A,1); %number of statues
+ens = size(A,2); %number of ensembles
+
+fprintf('Creating H \n')
+H = eye(n,n);
+In(1:ens,1:ens) = 1/n; 
+fprintf('Creating ab\n')
+Ab = A*In;
+fprintf('Creating ap\n')
+Ap = A-Ab;
+fprintf('Creating pe\n')
+Pe = Ap*Ap.'/ens-1;
+fprintf('Creating D\n')
+D = repmat(d,1,ens); %this is wrong - needs error
+fprintf('Creating Re\n')
+Re = Y*Y.' /ens-1;
+fprintf('Creating final: \n your computer should blow up at this point\n')
+
+dumb = A + Pe*H.'*(H*Pe*H.'+Re)^-1 * D;
+end
+
 function ens_sum = get_ens_sum(H,U,V)
 
 sum_mat = zeros(64,64,3);
@@ -269,21 +313,17 @@ x = 1:64;
 y=1:64;
 xR = 2:65;
 yR=2:65;
-        for i=1:ensemble
-            sum_mat(x,y,1) = sum_mat(x,y,1) + H(xR,yR,i);
-            sum_mat(x,y,2) = sum_mat(x,y,2) + U(xR,yR,i);
-            sum_mat(x,y,3) = sum_mat(x,y,3) + V(xR,yR,i);
-        end
+for i=1:ensemble
+    sum_mat(x,y,1) = sum_mat(x,y,1) + H(xR,yR,i);
+    sum_mat(x,y,2) = sum_mat(x,y,2) + U(xR,yR,i);
+    sum_mat(x,y,3) = sum_mat(x,y,3) + V(xR,yR,i);
+end
 
 ens_sum = sum_mat;
 
 end
 
 function avg = get_ens_avg(H,U,V)
-
-    ensemble = size(H,3);
-    avg = get_ens_sum(H,U,V) ./ ensemble;
-
 ensemble = size(H,3);
 avg = get_ens_sum(H,U,V) ./ ensemble;
 
@@ -297,10 +337,10 @@ file = importdata('REF_matrix.mat','-mat');
 for x=1:64
     for y=1:64
         for data=1:3
-            for run = 1:ensemble_num 
+            for run = 1:ensemble_num
                 sum(x,y,data) = sum(x,y,data)+ ...
-                file(run,time,x,y,data);
-
+                    file(run,time,x,y,data);
+                
             end
         end
     end

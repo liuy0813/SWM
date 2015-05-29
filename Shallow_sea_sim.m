@@ -55,7 +55,7 @@ end
 
 
 % Outer loop, restarts.
-max = 500; % total time
+max = 200; % total time
 sample = max/10; % max/n where n is desired number of samples
 nstep = 0;
 states = zeros(10,4,num_runs);
@@ -266,10 +266,10 @@ function ens_sum = get_ens_sum(H,U,V)
            end
        end
     end
-    ens_sum = sum_mat
+    ens_sum = sum_mat;
 end
 function avg = get_ens_avg(H,U,V)
-    ensemble = size(H,3)
+    ensemble = size(H,3);
     avg = get_ens_sum(H,U,V) ./ ensemble;
 end
 
@@ -281,7 +281,8 @@ for x=1:64
     for y=1:64
         for data=1:3
             for run = 1:ensemble_num 
-                sum(x,y,data) = sum(x,y,data)+file(run,time,x,y,data)
+                sum(x,y,data) = sum(x,y,data)+ ...
+                file(run,time,x,y,data);
             end
         end
     end

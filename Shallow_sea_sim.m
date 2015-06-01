@@ -317,7 +317,7 @@ ens_sum = sum_mat;
 
 end
 
-function ens_avg = get_avg(Mat)
+function ens_avg = get_avg(Mat) 
 sum_mat = zeros(4096);
 ens = size(Mat,3)';
 for x = 1:64
@@ -325,7 +325,7 @@ for x = 1:64
         for i = 1:ens
             sum_mat((x-1)*64+y) = sum_mat((x-1)*64+y) + Mat(x+1,y+1,i);
         end
-        end
+    end
 end
 ens_avg = sum_mat ./ ens;
 end

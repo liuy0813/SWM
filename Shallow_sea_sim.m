@@ -54,7 +54,6 @@ for i = 1 : m
     H_obs(i, Obs(i)) = 1;
 end
 
-
 %% define conditions of ensamble
 Nens = 10;
 time = 50;
@@ -72,13 +71,15 @@ D = zeros(21,21,Nens);  % create empty array for different drops
 
 for i = 1 : Nens
     a = 1.0;                  % min size
-    b = 2.0;                  % max size
+    b = 3.0;                  % max size
     height = (b-a).*randn(1,1) + a;   % initial drop size
     D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
 end
+%% Make empty vector for RMS of ens
 
+RMS_ens = zeros(time,1);
 
-% Init. graphics
+%% Init. graphics
 [surfplot,top] = initgraphics(Nvar);
 
 
@@ -104,7 +105,7 @@ for itime = 1 : time
     z = (squeeze(ObsValuesH(itime, :,:)))';
     
     % measurement error and covariance
-    gama = randn(m, Nens);       % Gaussian observation perturbation
+    gama = 0 + 1.*randn(m, Nens);       % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
     Obs_cov = (gama * gama') / (Nens - 1);
     Obs_ens = zeros(m, Nens);
     

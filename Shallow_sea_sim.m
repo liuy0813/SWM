@@ -197,25 +197,19 @@ while nstep < max
             %             %update state
             %             update_ens(analysis_change,H,U,V);
             %             t2 = toc(Tstart)
-            fprintf('Starting analysis at %d \n',nstep)
-            fprintf('Building huge\n')
-            huge = zeros(12288,ens_num);
-            for run = 1:ens_num
-                fprintf('Adding ens_num %d to huge\n',run)
-                for x = 1:64
-                    for y = 1:64
-                        huge((x-1)*64+y,run) = H(x,y,run);
-                        huge((x-1)*64+y+1,run) = U(x,y,run);
-                        huge((x-1)*64+y+2,run) = V(x,y,run);
-                    end
-                end
-            end
+            ens_h = get_avg(H);
+            ens_u = get_avg(U);
+            ens_v = get_avg(V);
+            
+            
             fprintf('Building d\n')
-            d = zeros(12288,1);
+            d = zeros(4096,1);
             fprintf('Building y\n')
-            Y = zeros(12288,ens_num);
+            Y = zeros(4096,1);
             fprintf('Starting naive\n')
-            a = naive_ana(huge,d,Y);
+            a_h = naive_ana(ens_h,d,Y);
+            a_u = naive_ana(ens_u,d,Y);
+            a_v = naive_ana(ens_v,d,Y);
             fprintf('Done %d\n',nstep)
             
             
@@ -321,6 +315,19 @@ end
 
 ens_sum = sum_mat;
 
+end
+
+function ens_avg = get_avg(Mat)
+sum_mat = zeros(4096);
+ens = size(Mat,3)';
+for x = 1:64
+    for y = 1:64
+        for i = 1:ens
+            sum_mat((x-1)*64+y) = sum_mat((x-1)*64+y) + Mat(x+1,y+1,i);
+        end
+        end
+end
+ens_avg = sum_mat ./ ens;
 end
 
 function avg = get_ens_avg(H,U,V)

@@ -56,7 +56,7 @@ end
 
 %% define conditions of ensamble
 Nens = 10;
-time = 50;
+time = 100;
 
 g = 9.8;                 % gravitational constant
 dt = 0.02;               % hardwired timestep
@@ -75,9 +75,9 @@ for i = 1 : Nens
     height = (b-a).*randn(1,1) + a;   % initial drop size
     D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
 end
-%% Make empty vector for RMS of ens
-
-RMS_ens = zeros(time,1);
+%% Make empty vector for RMSE of EnKF vs. REF
+RMSE = zeros(time,1);
+EnKF_Average = zeros(time,64,64);
 
 %% Init. graphics
 [surfplot,top] = initgraphics(Nvar);
@@ -224,13 +224,20 @@ for itime = 1 : time
         S = diag(Xi);
         
         mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
-        
+        % Data Assimilate
         H = H + Ens_cov * H_obs' * ( mInverse * (Obs_ens - H_obs * H) );
         
         % Reshape H back to 3 dimensions!!!
         H = reshape(H,Nvar+2,Nvar+2,10);
         
-        % Update plot
+        %% Get RMS average of place in time
+for q = 1:Nvar
+    for p = 1:Nvar
+       EnKF_Average(itime,q,p) = mean(H(q+1,p+1,:));
+    end
+end
+     
+        %% Update plot
         if mod(k,Nens) == 0
             C = abs(U(i,j,k)) + abs(V(i,j,k));  % Color shows momemtum
             set(surfplot,'zdata',H(i,j,k),'cdata',C);
@@ -246,6 +253,20 @@ toc;
 %% Save result for plotting and post-analysis purpose
 filename = 'EnKF_SWM.mat';
 save (filename);
+
+% calculate RMSE
+xtime = 1:time;
+
+for i = 1 : time
+    error = EnKF_Average(i,:,:) - ObsValuesH(i,:,:);
+RMSE(i) = sqrt(mean(mean((error).^2)));
+end
+
+figure(1)
+plot(xtime,RMSE,'LineWidth',3)
+title('mean of RMS Error of Reference Model')
+xlabel('time')
+ylabel('RMSE')
 end
 % ------------------------------------
 
@@ -284,6 +305,8 @@ top = title('Shallow Sea Sim Ensemble');
 
 return
 end
+
+
 
 %  GOES IN MAIN METHOD
 %         if(mod(nstep,sample) == 0)

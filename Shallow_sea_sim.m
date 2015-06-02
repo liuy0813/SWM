@@ -54,9 +54,11 @@ for i = 1 : m
     H_obs(i, Obs(i)) = 1;
 end
 
+
 %% define conditions of ensamble
 Nens = 10;
 time = 50;
+
 
 g = 9.8;                 % gravitational constant
 dt = 0.02;               % hardwired timestep
@@ -67,12 +69,14 @@ dy = 1.0;         % plot interval
 
 %% Initial Drop
 drop_dim = 21;
+
 D = zeros(21,21,Nens);  % create empty array for different drops
 
 for i = 1 : Nens
     a = 1.0;                  % min size
     b = 3.0;                  % max size
     height = (b-a).*randn(1,1) + a;   % initial drop size
+
     D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
 end
 %% Make empty vector for RMS of ens
@@ -81,6 +85,7 @@ RMS_ens = zeros(time,1);
 
 %% Init. graphics
 [surfplot,top] = initgraphics(Nvar);
+
 
 
 tic;
@@ -103,6 +108,7 @@ for itime = 1 : time
     
     % Observations at the end of the time interval
     z = (squeeze(ObsValuesH(itime, :,:)))';
+
     
     % measurement error and covariance
     gama = 0 + 1.*randn(m, Nens);       % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
@@ -123,6 +129,7 @@ for itime = 1 : time
             j = 5 +(1:w);
             H(i,j,k) = H(i,j,k) + 0.5*D(:,:,k);
         end
+
         
         % Reflective boundary conditions
         H(:,1,k) = H(:,2,k);
@@ -222,6 +229,7 @@ for itime = 1 : time
         end
         
         S = diag(Xi);
+
         
         mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
         
@@ -407,4 +415,3 @@ end
 %     end
 % end
 % end
-

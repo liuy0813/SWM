@@ -16,7 +16,7 @@ D = zeros(21,21,ens);  % create empty array for different drops
 for i = 1 : ens
 a = 1.45;                  % min size
 b = 1.55;                  % max size
-height = (b-a).*rand(1,1) + a;   % initial drop size
+height = (b-a).*randn(1,1) + a;   % initial drop size
 D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
 end
 % Initialize graphics

@@ -56,7 +56,7 @@ end
 
 %% define conditions of ensamble
 Nens = 10;
-time = 100;
+time = 20;
 
 g = 9.8;                 % gravitational constant
 dt = 0.02;               % hardwired timestep
@@ -71,13 +71,16 @@ D = zeros(21,21,Nens);  % create empty array for different drops
 
 for i = 1 : Nens
     a = 1.0;                  % min size
-    b = 3.0;                  % max size
+    b = 2.0;                  % max size
     height = (b-a).*randn(1,1) + a;   % initial drop size
     D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
 end
 %% Make empty vector for RMSE of EnKF vs. REF
 RMSE = zeros(time,1);
-EnKF_Average = zeros(time,64,64);
+RMS_H = zeros(time,64,64);
+temp = 0;
+ test_H_mean = zeros(time,1); 
+ test_H = zeros(time,1);
 
 %% Init. graphics
 [surfplot,top] = initgraphics(Nvar);
@@ -230,15 +233,21 @@ for itime = 1 : time
         % Reshape H back to 3 dimensions!!!
         H = reshape(H,Nvar+2,Nvar+2,10);
         
-        %% Get RMS average of place in time
+        %% Calc Error
 for q = 1:Nvar
     for p = 1:Nvar
-       EnKF_Average(itime,q,p) = mean(H(q+1,p+1,:));
+        for s = 1 : Nens
+       temp = temp +  (H(q+1,p+1,s)-ObsValuesH(itime,q,p))^2;
+        end
+        RMS_H(itime,q,p) = sqrt(temp/Nens);
+        temp = 0;
     end
 end
      
         %% Update plot
         if mod(k,Nens) == 0
+            test_H_mean(itime)  = mean(H(16,16,:));
+            test_H(itime)  = H(16,16,Nens);
             C = abs(U(i,j,k)) + abs(V(i,j,k));  % Color shows momemtum
             set(surfplot,'zdata',H(i,j,k),'cdata',C);
             set(top,'string',sprintf('step = %d',itime))
@@ -256,10 +265,13 @@ save (filename);
 
 % calculate RMSE
 xtime = 1:time;
+size(ObsValuesH)
+size(RMS_H)
 
 for i = 1 : time
-    error = EnKF_Average(i,:,:) - ObsValuesH(i,:,:);
-RMSE(i) = sqrt(mean(mean((error).^2)));
+    RMS_H(i,16,16)
+% RMSE(i) = mean(mean(RMS_H(i,:,:)));
+RMSE(i) =  RMS_H(i,16,16);
 end
 
 figure(1)
@@ -267,6 +279,18 @@ plot(xtime,RMSE,'LineWidth',3)
 title('mean of RMS Error of Reference Model')
 xlabel('time')
 ylabel('RMSE')
+
+figure(2)
+plot(xtime,test_H_mean,xtime,ObsValuesH(xtime,16,16))
+title('Compare ObsValuesH to H_mean')
+xlabel('time')
+ylabel('value')
+
+figure(3)
+plot(xtime,test_H,ObsValuesH(xtime,16,16))
+title('Compare ObsValuesH to some ens of H')
+xlabel('time')
+ylabel('value')
 end
 % ------------------------------------
 

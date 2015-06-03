@@ -1,4 +1,4 @@
-function waterwave () %Drop_height, time
+function waterwave (Nens,time) %Drop_height, time
 
 % WATER WAVE
 % 2D Shallow Water Model
@@ -27,37 +27,29 @@ function waterwave () %Drop_height, time
 %    http://www.amath.washington.edu/~dgeorge/tsunamimodeling.html
 %    http://www.amath.washington.edu/~claw/applications/shallow/www
 
-% Set up Reference Matrix
-% fprintf('Loading reference matrix...\n')
-% %ref_mat = zeros(100, 500,  64, 64, 3);
-% mat = importdata('REF_matrix.mat','-mat'); % default var name is ref_mat
-%
-% [ens,time,Nvar,~,vals] = size(mat);  % read in matrix
+
 fprintf('Bulding Obs matrix for H...\n')
+%% define conditions of ensamble
+
 
 ObsValuesH = importdata('OBS_matrix_H.mat','-mat');
 % ObsValuesU = importdata('OBS_matrix_U.mat','-mat');
 % ObsValuesV = importdata('OBS_matrix_V.mat','-mat');
-[time,Nvar,~] = size(ObsValuesH);
-% for i = 1 : time
-%     ObsValuesH(i,:,:) = squeeze(mean(mat(:,i,:,:,1)));
-%     %ObsValuesU(i,:,:) = squeeze(mean(mat(:,i,:,:,2)));
-%     %ObsValuesV(i,:,:) = squeeze(mean(mat(:,i,:,:,3)));
-% end
+[~,Nvar,~] = size(ObsValuesH);
 
-m=1; % for now vet state variables to 1, will be 3 in the end
+
+num_elems =1; % for now set state elements to 1, will be 3 in the end
 
 % Observation mapping operator, H is a fat short matrix
-Obs = 1 : Nvar; % Observe all
-H_obs = zeros(m, (Nvar+2)^2);
-for i = 1 : m
-    H_obs(i, Obs(i)) = 1;
+
+Obs = 1 : Nvar; % Observe all, can change step size to alter frequency of observations
+H_Map = zeros(num_elems, (Nvar+2)^2);
+
+for i = 1 : num_elems
+    H_Map(i, Obs(i)) = 1;
 end
 
-%% define conditions of ensamble
-Nens = 10;
-time = 20;
-
+%% define model enviornment
 g = 9.8;                 % gravitational constant
 dt = 0.02;               % hardwired timestep
 dx = 1.0;
@@ -70,22 +62,25 @@ drop_dim = 21;
 D = zeros(21,21,Nens);  % create empty array for different drops
 
 for i = 1 : Nens
-    a = 1.0;                  % min size
-    b = 2.0;                  % max size
+    a = 1.4;                  % min size
+    b = 1.5;                  % max size
     height = (b-a).*randn(1,1) + a;   % initial drop size
+    
     D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
 end
+
 %% Make empty vector for RMSE of EnKF vs. REF
+
 RMSE = zeros(time,1);
 RMS_H = zeros(time,64,64);
 temp = 0;
- test_H_mean = zeros(time,1); 
- test_H = zeros(time,1);
+test_H_mean = zeros(time,1); 
+test_H = zeros(time,1);
 
 %% Init. graphics
 [surfplot,top] = initgraphics(Nvar);
 
-
+%% Init. timer
 tic;
 
 %% Create ensamble of zeros/ones to store models
@@ -97,35 +92,41 @@ Hy  = zeros(Nvar+1,Nvar+1,Nens); Uy  = zeros(Nvar+1,Nvar+1,Nens); Vy  = zeros(Nv
 
 %% Run Shallow Water Model
 for itime = 1 : time
-    % Debugging code!!!
+    
+    % Output first 5 loops
     if mod(itime, 5) == 0
         fprintf('Current run: %d \n',itime)
-    elseif itime <= 5
+        % Increase loop message frequency
+    elseif itime <= 10
         fprintf('Current run: %d \n',itime)
     end
     
     % Observations at the end of the time interval
-    z = (squeeze(ObsValuesH(itime, :,:)))';
+    z = squeeze(ObsValuesH(itime, :,:))';
     
     % measurement error and covariance
-    gama = 0 + 1.*randn(m, Nens);       % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
+    gama = 0 + 1.*randn(num_elems, Nens);   % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
     Obs_cov = (gama * gama') / (Nens - 1);
-    Obs_ens = zeros(m, Nens);
+    Obs_ens = zeros(num_elems, Nens);
     
     % perturbed measurement
-    for i = 1 : m
+    for i = 1 : num_elems
         Obs_ens(i, :) = z(i) + gama(i, :);    %% Measurement Ensemble
     end
     
     
-    % initialize water drops
+    % Nested loop for Ensembles
     for k = 1 : Nens
+        
+         % initialize water drop
         if itime == 1;
             w = size(D(:,:,k),1);
             i = 5 +(1:w);
             j = 5 +(1:w);
             H(i,j,k) = H(i,j,k) + 0.5*D(:,:,k);
         end
+        
+      
         
         % Reflective boundary conditions
         H(:,1,k) = H(:,2,k);
@@ -196,22 +197,21 @@ for itime = 1 : time
             (Vy(i-1,j-1,k).^2./Hy(i-1,j-1,k) + g/2*Hy(i-1,j-1,k).^2));
         
 
-        %% Compute ensemble
-        
+        %% Compute ensemble     
         OneN(1 : Nens, 1 : Nens) = 1 / Nens;
         H = permute(H,[1 2 3]);
-        H = reshape(H,(Nvar+2)^2,10);
+        H = reshape(H,(Nvar+2)^2,Nens);
         Hbar   = H * OneN; % can't use three dimensions
         Hprime = H - Hbar;
         
         %% Compute ensemble covariance matrix
         Ens_cov = (Hprime * Hprime') / (Nens - 1);
-        
-        M = H_obs * Ens_cov * H_obs' + Obs_cov;   % Analysis equation
+
+        M = H_Map * Ens_cov * H_Map' + Obs_cov;   % Analysis equation
         
         %% Compute M inverse
         %handling the singular values
-        
+        %M
         [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
         Xi = diag(S);    % singular values
         nos = length(Xi);
@@ -227,11 +227,12 @@ for itime = 1 : time
         S = diag(Xi);
         
         mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
+        
         % Data Assimilate
-        H = H + Ens_cov * H_obs' * ( mInverse * (Obs_ens - H_obs * H) );
+        H = H + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * H) );
         
         % Reshape H back to 3 dimensions!!!
-        H = reshape(H,Nvar+2,Nvar+2,10);
+        H = reshape(H,Nvar+2,Nvar+2,Nens);
         
         %% Calc Error
 for q = 1:Nvar
@@ -248,13 +249,13 @@ end
         if mod(k,Nens) == 0
             test_H_mean(itime)  = mean(H(16,16,:));
             test_H(itime)  = H(16,16,Nens);
+
             C = abs(U(i,j,k)) + abs(V(i,j,k));  % Color shows momemtum
             set(surfplot,'zdata',H(i,j,k),'cdata',C);
             set(top,'string',sprintf('step = %d',itime))
             drawnow
         end
-    end
-    
+    end    
 end
 disp('Run time.....');
 toc;
@@ -263,31 +264,35 @@ toc;
 filename = 'EnKF_SWM.mat';
 save (filename);
 
-% calculate RMSE
 xtime = 1:time;
-size(ObsValuesH)
-size(RMS_H)
 
 for i = 1 : time
-    RMS_H(i,16,16)
-% RMSE(i) = mean(mean(RMS_H(i,:,:)));
 RMSE(i) =  RMS_H(i,16,16);
 end
 
+%% Plot results and error
 figure(1)
 plot(xtime,RMSE,'LineWidth',3)
+% axis([0 time 0 0.2])
 title('mean of RMS Error of Reference Model')
 xlabel('time')
 ylabel('RMSE')
 
+Obs_point = ObsValuesH(xtime,16,16);
+
 figure(2)
-plot(xtime,test_H_mean,xtime,ObsValuesH(xtime,16,16))
+plot(xtime,test_H_mean,'-.b',xtime,Obs_point,'-ro','LineWidth',1)
+legend('Mean Height','Observed Height')
+legend
+axis([0 time 0 5])
 title('Compare ObsValuesH to H_mean')
 xlabel('time')
 ylabel('value')
 
 figure(3)
-plot(xtime,test_H,ObsValuesH(xtime,16,16))
+plot(xtime,test_H,'-.b',xtime,Obs_point,'-ro','LineWidth',1)
+legend('Rand Ens Height','Observed Height')
+axis([0 time 0 5])
 title('Compare ObsValuesH to some ens of H')
 xlabel('time')
 ylabel('value')
@@ -329,129 +334,3 @@ top = title('Shallow Sea Sim Ensemble');
 
 return
 end
-
-
-
-%  GOES IN MAIN METHOD
-%         if(mod(nstep,sample) == 0)
-%             %make avg matrix for state - all 3 variables for all x,y
-%             Tstart = tic
-%             ens_avg = get_ens_avg(H,U,V);
-%             obs = get_obs(nstep,0); %update to change error
-%             t1 = toc(Tstart)
-%
-%             %generate errors
-%             ens_err = get_ens_err(H,U,V,ens_avg,nstep);
-%             obs_err = get_obs_err(0);
-%             t2 = toc(Tstart)
-%
-%             %calc kalman gain
-%             k_gain = get_k_gain(ens_err,obs_err);
-%             t3 = toc(Tstart)
-%             %ofset ens_avg
-%             analysis_change = get_ana_chng(ens_avg,obs,k_gain);
-%             t4 = toc(Tstart)
-%
-%             %update state
-%             update_ens(analysis_change,H,U,V);
-%             t2 = toc(Tstart)
-%
-%         end
-
-% function ens_sum = get_ens_sum(H,U,V)
-% sum_mat = zeros(64,64,3);
-% ensemble = size(H,3);
-% x = 1:64;
-% y=1:64;
-% xR = 2:65;
-% yR=2:65;
-%         for i=1:ensemble
-%             sum_mat(x,y,1) = sum_mat(x,y,1) + H(xR,yR,i);
-%             sum_mat(x,y,2) = sum_mat(x,y,2) + U(xR,yR,i);
-%             sum_mat(x,y,3) = sum_mat(x,y,3) + V(xR,yR,i);
-%         end
-%
-% ens_sum = sum_mat;
-% end
-%
-% function avg = get_ens_avg(H,U,V)
-% ensemble = size(H,3);
-% avg = get_ens_sum(H,U,V) ./ ensemble;
-% end
-%
-% function obs = get_obs(time,error)
-% ensemble_num = 100; %MAGIC NUMBER
-% sum = zeros(64,64,3);
-% file = importdata('REF_matrix.mat','-mat');
-%
-% for x=1:64
-%     for y=1:64
-%         for data=1:3
-%             for run = 1:ensemble_num
-%                 sum(x,y,data) = sum(x,y,data)+file(run,time,x,y,data);
-%             end
-%         end
-%     end
-% end
-%
-% avg = sum ./ ensemble_num;
-% %do errror
-% obs = avg;
-% end
-%
-% function error_ens = get_ens_err(H,U,V,ens_sum,T)
-% total_err = zeros(64,64,3);
-% ensemble = size(H,3);
-% for i=1:ensemble
-%     for x=1:64
-%         for y = 1:64
-%             total_err(x,y,1) = total_err(x,y,1) + (H(x,y,i) - ens_sum(x,y,1))...
-%                 .*(H(x,y,1) - ens_sum(x,y,1))^T;
-%
-%             total_err(x,y,2) = total_err(x,y,2) + (U(x,y,i) - ens_sum(x,y,2))...
-%                 .*(H(x,y,i) - ens_sum(x,y,2))^T;
-%
-%             total_err(x,y,3) = total_err(x,y,3) + (V(x,y,i) - ens_sum(x,y,3))...
-%                 .*(H(x,y,i) - ens_sum(x,y,3))^T;
-%         end
-%     end
-% end
-% error_ens = total_err/(ensemble-1);
-% end
-%
-% function obs_err = get_obs_err(input)
-% obs_err = eye(3); %we don't know what to do here
-% end
-%
-% function k_gain = get_k_gain(ens_err, obs_err)
-% H = eye(3,1);
-% k_gain = zeros(64,64,3);
-% size(ens_err)
-% size(obs_err)
-% obs_err
-% size(H)
-% for i = 1:64
-%     for j = 1:64
-%         k_gain(i,j,:) = ens_err(i,j,:) .* (H.*ens_err(i,j,:)+obs_err)^-1; %what is H^t
-%     end
-% end
-% end
-%
-% function analysis_change = get_ana_chng(ens_avg,obs,k_gain)
-%
-% analysis_change =k_gain(obs - ens_avg);
-% end
-%
-% function update_ens(ana_chng,H,U,V)
-% ensemble = size(H,3);
-% for x=1:64
-%     for y = 1:64;
-%         for i=1:ensemble
-%             H(x,y,i) = H(x,y,i) + ana_chng(x,y,1);
-%             U(x,y,i) = U(x,y,i) + ana_chng(x,y,2);
-%             V(x,y,i) = V(x,y,i) + ana_chng(x,y,3);
-%         end
-%     end
-% end
-% end
-

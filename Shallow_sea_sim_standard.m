@@ -1,8 +1,5 @@
-function waterwave (Nens,time, obs_freq) %Drop_height, time
-%
-%  clear all
-% close all
-clc
+function waterwave (Nens,time) %Drop_height, time
+
 % WATER WAVE
 % 2D Shallow Water Model
 %
@@ -40,21 +37,15 @@ fprintf('Bulding Obs matrix for H...\n')
 
 
 ObsValuesH = importdata('OBS_matrix_H.mat','-mat');
+RMSE_EnKF = importdata('EnKF_error.mat','-mat');
+D = importdata('drops.mat','-mat');
 % ObsValuesU = importdata('OBS_matrix_U.mat','-mat');
 % ObsValuesV = importdata('OBS_matrix_V.mat','-mat');
 [~,Nvar,~] = size(ObsValuesH);
 
-
-num_elems =1; % for now set state elements to 1, will be 3 in the end
-
-% Observation mapping operator, H is a fat short matrix
-
-Obs = 1 : Nvar; % Observe all, can change step size to alter frequency of observations
-H_Map = zeros(num_elems, (Nvar)^2);
-
-for i = 1 : num_elems
-    H_Map(i, Obs(i)) = 1;
-end
+RMSE = zeros(time,1);
+RMS_H = zeros(time,64,64);
+temp = 0;
 
 %% define model enviornment
 g = 9.8;                 % gravitational constant
@@ -65,23 +56,20 @@ dy = 1.0;         % plot interval
 %dropstep = 500;          % drop interval
 
 %% Initial Drop
-drop_dim = 21;
-D = zeros(21,21,Nens);  % create empty array for different drops
+% drop_dim = 21;
+% D = zeros(21,21,Nens);  % create empty array for different drops
+% 
+% for i = 1 : Nens
+%     a = 1.5;                  % min size
+%     b = 2.5;                  % max size
+%     height = (b-a).*randn(1,1) + a;   % initial drop size
+%     
+%     D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
+% end
 
-for i = 1 : Nens
-    a = 1.4;                  % min size
-    b = 3;                  % max size
-    height = (b-a).*randn(1,1) + a;   % initial drop size
-    
-    D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
-end
+%% Make empty vector for test points
 
-%% Make empty vector for RMSE of EnKF vs. REF
-
-RMSE = zeros(time,1);
-RMS_H = zeros(time,64,64);
-temp = 0;
-test_H_mean = zeros(time,1);
+test_H_mean = zeros(time,1); 
 test_H = zeros(time,1);
 
 %% Init. graphics
@@ -108,24 +96,10 @@ for itime = 1 : time
         fprintf('Current run: %d \n',itime)
     end
     
-    % Observations at the end of the time interval
-    z = squeeze(ObsValuesH(itime, :,:))';
-    
-    % measurement error and covariance
-    gama = 0 + 1.*randn(num_elems, Nens);   % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
-    Obs_cov = (gama * gama') / (Nens - 1);
-    Obs_ens = zeros(num_elems, Nens);
-    
-    % perturbed measurement
-    for i = 1 : num_elems
-        Obs_ens(i, :) = z(i) + gama(i, :);    %% Measurement Ensemble
-    end
-    
-    
     % Nested loop for Ensembles
     for k = 1 : Nens
         
-        % initialize water drop
+         % initialize water drop
         if itime == 1;
             w = size(D(:,:,k),1);
             i = 5 +(1:w);
@@ -133,7 +107,7 @@ for itime = 1 : time
             H(i,j,k) = H(i,j,k) + 0.5*D(:,:,k);
         end
         
-        
+      
         
         % Reflective boundary conditions
         H(:,1,k) = H(:,2,k);
@@ -203,106 +177,49 @@ for itime = 1 : time
             - (dt/dy)*((Vy(i-1,j,k).^2./Hy(i-1,j,k) + g/2*Hy(i-1,j,k).^2) - ...
             (Vy(i-1,j-1,k).^2./Hy(i-1,j-1,k) + g/2*Hy(i-1,j-1,k).^2));
         
-        
-        
-      
-        
+
+
         %% Update plot
         if mod(k,Nens) == 0
+            
             test_H_mean(itime)  = mean(H(16,16,:));
             test_H(itime)  = H(16,16,Nens);
-            
+
             C = abs(U(i,j,k)) + abs(V(i,j,k));  % Color shows momemtum
             set(surfplot,'zdata',H(i,j,k),'cdata',C);
             set(top,'string',sprintf('step = %d',itime))
             drawnow
         end
         
-    end
-    %% Control observations with if loop and mod num
-    if mod(itime,obs_freq) == 0, %(itime > 160))
-        
-         
-        % Compute ensemble
-        
-        OneN(1 : Nens, 1 : Nens) = 1 / Nens;
-        H = permute(H,[1 2 3]);
-        H = reshape(H(2:65,2:65,:),(Nvar)^2,Nens);
-        %H_temp = reshape(H,Nvar+2,Nvar+2,Nens);
-        Hbar   = H * OneN; % can't use three dimensions
-        Hprime = H - Hbar;
-        
-        % Compute ensemble covariance matrix
-        Ens_cov = (Hprime * Hprime') / (Nens - 1);
-        
-        M = H_Map * Ens_cov * H_Map' + Obs_cov;   % Analysis equation
-        
-        % Compute M inverse
-        %handling the singular values
-        %M
-        [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
-        Xi = diag(S);    % singular values
-        nos = length(Xi);
-        
-        for jj = 1 : nos
-            if (Xi(jj) < Xi(1) / (10^6))
-                Xi(jj) = 0;
-            else
-                Xi(jj) = 1 / Xi(jj);
-            end
-        end
-        
-        S = diag(Xi);
-        
-        mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
-        
-        % Data Assimilate
-        H = H + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * H) );
-        %H = H + H_Map' * (Obs_ens - H_Map * H);
-        
-        % Reshape H back to 3 dimensions!!!
-        H = reshape(H,Nvar,Nvar,Nens);
-        
-        B = zeros(Nvar+2,Nvar+2,Nens);
-        B(2:Nvar+1,2:Nvar+1,:)= H;
-        H = B;
-        
-        
-    end
-      %% Calc Error
+          %% Calc Error
         for q = 1:Nvar
             for p = 1:Nvar
                 for s = 1 : Nens
-%                     if abs((H(q+1,p+1,s)-ObsValuesH(itime,q,p))) > 0.5
-%                         (H(q+1,p+1,s)-ObsValuesH(itime,q,p))
-%                     end
                     temp = temp +  (H(q+1,p+1,s)-ObsValuesH(itime,q,p))^2;
                 end
                 RMS_H(itime,q,p) = sqrt(temp/Nens);
                 temp = 0;
             end
-        end  
+        end
+    end    
 end
 disp('Run time.....');
 toc;
 
 %% Save result for plotting and post-analysis purpose
-filename = 'EnKF_SWM.mat';
+filename = 'SWM_standard.mat';
 save (filename);
+
 xtime = 1:time;
 
 for i = 1 : time
     RMSE(i) =  mean(mean(RMS_H(i,:,:)));
 end
 
-%file = 'EnKF_error.mat';
-save('EnKF_error.mat','RMSE');
-save('drops.mat', 'D');
 
 %% Plot results and error
 figure(1)
-size(RMSE)
-plot(xtime,RMSE,'g','LineWidth',1)
+plot(xtime,RMSE,'r',xtime,RMSE_EnKF,'b','LineWidth',1)
 %axis([0 time -0.2 0.5])
 title('mean of RMS Error of Reference Model')
 xlabel('time')
@@ -310,14 +227,12 @@ ylabel('RMSE')
 
 Obs_point = ObsValuesH(xtime,16,16);
 
-ymarkers = 1:obs_freq:time;
-
 figure(2)
-plot(xtime,test_H_mean,'b',xtime,Obs_point,'r') %,'LineWidth',1 ymarkers,test_H_mean(ymarkers),'m'
+plot(xtime,test_H_mean,'b',xtime,Obs_point,'r') %,'LineWidth',1
 legend('Mean Height','Observed Height')
 legend
-axis([0 time 0 5])
-title('ENKF Compare ObsValuesH to H_mean')
+% axis([0 time 0 5])
+title('STANDARD Compare ObsValuesH to H_mean')
 xlabel('time')
 ylabel('value')
 
@@ -325,7 +240,7 @@ figure(3)
 plot(xtime,test_H,'b',xtime,Obs_point,'r') % ,'LineWidth',1
 legend('Rand Ens Height','Observed Height')
 axis([0 time 0 5])
-title('ENKF Compare ObsValuesH to some ens of H')
+title('STANDARD Compare ObsValuesH to some ens of H')
 xlabel('time')
 ylabel('value')
 end
@@ -361,7 +276,7 @@ caxis([-1 1])
 shading faceted
 c = (1:64)'/64;
 cyan = [c*0 c c];
-colormap(winter)
+colormap(cyan)
 top = title('Shallow Sea Sim Ensemble');
 
 return

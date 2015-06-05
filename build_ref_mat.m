@@ -3,7 +3,6 @@ function build_ref_mat(Nens,time)
 ref_mat = zeros(Nens,time,64,64,3);
 
 % timing
-runtime = 0;
 
 n = 64;                  % grid size
 g = 9.8;                 % gravitational constant

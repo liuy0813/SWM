@@ -71,7 +71,7 @@ D = zeros(21,21,Nens);  % create empty array for different drops
 for i = 1 : Nens
     a = 1.5;                  % min size
     b = 2.5;                  % max size
-    height = (b-a).*randn(1,1) + a;   % initial drop size
+    height = (b-a).*randn(1,1) + a   % initial drop size
     
     D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
 end
@@ -208,16 +208,16 @@ for itime = 1 : time
         end
         
     end
-    %% Control observations with if loop and mod num
-    if mod(itime,obs_freq) == 0, %(itime > 160))
-        
-        
+    %% Perform DA every obs_freq runs
+    if mod(itime,obs_freq) == 0
+        tic;
+        fprintf('Starting DA at time: %d \n', itime)
         % Observations at the end of the time interval
         z = squeeze(ObsValuesH(itime, :,:))';
         z = squeeze(reshape(z,4096,1));
-        size(z);
+        
         % measurement error and covariance
-        gama = zeros(4096); %+ .01*randn(num_elems, Nens);   % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
+        gama = zeros(4096) + .01*randn(num_elems);   % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
         gama = squeeze(gama);
         Obs_cov = (gama * gama') / (Nens - 1);
         Obs_ens = zeros(num_elems, Nens);
@@ -228,54 +228,59 @@ for itime = 1 : time
             Obs_ens(:,i) = z + gama(1);    %% Measurement Ensemble
         end
         
-        Obs_ens;
         
-        
-        asdf = 0
         % Compute ensemble
         
         OneN(1 : Nens, 1 : Nens) = 1 / Nens;
         Hpre = H;
         H = permute(H,[1 2 3]);
         H = reshape(H(2:65,2:65,:),(Nvar)^2,Nens);
-        %H_temp = reshape(H,Nvar+2,Nvar+2,Nens);
+        
         Hbar   = H * OneN; % can't use three dimensions
         Hprime = H - Hbar;
-        size(Hprime)
-        asdf1 = 0
+        
         % Compute ensemble covariance matrix
-        %Ens_cov = (Hprime * Hprime') / (Nens - 1);
-        asdf2 = 0
-        %M = Ens_cov + Obs_cov;   % Analysis equation
+        Ens_cov = (Hprime * Hprime') / (Nens - 1);
+        
+        M = Ens_cov + Obs_cov;   % Analysis equation
         %size(M)
-        asdf3 = 0
+        
         % Compute M inverse
         %handling the singular values
         %M
         
-%         [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
-%         Xi = diag(S);% singular values
-%         asdf3_4 = 0
-%         nos = length(Xi);
-%         asdf3_5 = 0
-%         for jj = 1 : nos
-%             if (Xi(jj) < Xi(1) / (10^6))
-%                 Xi(jj) = 0;
-%             else
-%                 Xi(jj) = 1 / Xi(jj);
-%             end
-%         end
-%         asdf4 = 0
-%         S = diag(Xi);
-%         
-%         mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
+
+        fprintf('Time up to this point: %d \n',toc ...
+            ,' Beginning svd calc \n')
+        tic; 
+        [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
+         
+         
+         Xi = diag(S);% singular values
+         
+         nos = length(Xi);
+         
+         for jj = 1 : nos
+             if (Xi(jj) < Xi(1) / (10^6))
+                 Xi(jj) = 0;
+             else
+                 Xi(jj) = 1 / Xi(jj);
+             end
+         end
         
+         S = diag(Xi);
+         
+         fprintf('SVD time: %d calc starting mInverse \n',toc)
+         tic;
+         mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
+        
+         fprintf('Done with inverse, creating analysis\n')
         % Data Assimilate
-        %H = H + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * H) );
-        H = H + (Obs_ens - H_Map * H);
-        asdf5= 0
-        size(Obs_ens)
-        size(H_Map)
+        H = H + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * H) );
+        %H = H + (Obs_ens - H_Map * H);
+        fprintf('Time for inverse+analysis: %d reshaping\n',toc)
+        tic;
+        
         % Reshape H back to 3 dimensions!!!
         H = reshape(H,Nvar,Nvar,Nens);
         
@@ -290,6 +295,7 @@ for itime = 1 : time
                 end
             end
         end
+        fprintf('Done with DA. Time to end: %d \n',toc)
         
     end
     %% Calc Error

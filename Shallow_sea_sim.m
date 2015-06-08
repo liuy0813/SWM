@@ -69,10 +69,11 @@ drop_dim = 21;
 D = zeros(21,21,Nens);  % create empty array for different drops
 
 for i = 1 : Nens
-    a = 1.5;                  % min size
-    b = 2.5;                  % max size
-    height = (b-a).*randn(1,1) + a   % initial drop size
-    
+    center = 1.5;
+    std_dev = .5;% max size
+    height = center + 1.75*std_dev*randn(1,1);   % initial value for droplet
+    %note: 1.75 is a constant that makes final drop size close to normally
+    %distributed - determined by testing different constants on 10,000 ens
     D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
 end
 
@@ -111,6 +112,7 @@ for itime = 1 : time
     
     
     
+    max_vals = zeros(Nens,1);
     % Nested loop for Ensembles
     for k = 1 : Nens
         
@@ -120,6 +122,8 @@ for itime = 1 : time
             i = 5 +(1:w);
             j = 5 +(1:w);
             H(i,j,k) = H(i,j,k) + 0.5*D(:,:,k);
+            max_vals(k) = max(max(H(:,:,k)));
+            
         end
         
         
@@ -208,6 +212,7 @@ for itime = 1 : time
         end
         
     end
+    
     %% Perform DA every obs_freq runs
     if mod(itime,obs_freq) == 0
         tic;
@@ -311,6 +316,24 @@ for itime = 1 : time
             temp = 0;
         end
     end
+    if(itime == 1)
+        fprintf('Max is %d and min is %d \n',max(max_vals),min(max_vals))
+        one_dev = 0;
+        two_dev = 0;
+        three_dev = 0;
+        for itr = 1:Nens
+            if std_dev > abs(center - max_vals(itr)) 
+                one_dev = one_dev +1;
+            elseif std_dev > .5 * abs(center - max_vals(itr))
+                two_dev = two_dev + 1;
+            elseif std_dev > .25 *abs(center - max_vals(itr))
+                three_dev = three_dev + 1;
+            end 
+        end
+        two_dev = two_dev+one_dev;
+        three_dev = two_dev+three_dev;
+        fprintf('One %d , two %d , three %d \n', one_dev, two_dev, three_dev);
+    end
 end
 disp('Run time.....');
 toc;
@@ -364,11 +387,9 @@ function D = droplet ( height, width )
 
 % DROPLET  2D Gaussian
 % D = droplet(height,width)
-%
 [ x, y ] = ndgrid ( -1:(2/(width-1)):1 );
 
 D = height * exp ( -5 * ( x.^2 + y.^2 ) );
-
 return
 end
 

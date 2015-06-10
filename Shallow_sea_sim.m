@@ -47,7 +47,9 @@ ObsValuesH = importdata('OBS_matrix_H.mat','-mat');
 
 
 
+
 %% define model enviornment
+
 g = 9.8;                 % gravitational constant
 dt = 0.02;               % hardwired timestep
 dx = 1.0;
@@ -66,6 +68,7 @@ for i = 1 : num_elems
 end
 %% Initial Drop
 drop_dim = 21;
+
 D = zeros(21,21,Nens);  % create empty array for different drops
 
 for i = 1 : Nens
@@ -88,7 +91,9 @@ test_H = zeros(time,1);
 %% Init. graphics
 [surfplot,top] = initgraphics(xDim);
 
+
 %% Init. timer
+
 tic;
 
 %% Create ensamble of zeros/ones to store models
@@ -119,7 +124,7 @@ for itime = 1 : time
         fprintf('Current run: %d \n',itime)
     end
   
-    
+   
     
     
     max_vals = zeros(Nens,1);
@@ -135,6 +140,7 @@ for itime = 1 : time
             max_vals(k) = max(max(H(:,:,k)));
             
         end
+
         
         
         
@@ -270,6 +276,7 @@ for itime = 1 : time
         end
         
         S = diag(Xi);
+
         
         fprintf('SVD time: %d calc starting mInverse \n',toc)
         tic;
@@ -401,6 +408,7 @@ top = title('Shallow Sea Sim Ensemble');
 return
 end
 
+<<<<<<< HEAD
 function check_std_dev(std_dev, center, max_vals)
 fprintf('Max is %d and min is %d \n',max(max_vals),min(max_vals))
 one_dev = 0;

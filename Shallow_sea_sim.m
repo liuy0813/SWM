@@ -225,8 +225,9 @@ for itime = 1 : time
         tic;
         fprintf('Starting DA at time: %d \n', itime)
         % Observations at the end of the time interval
-        z = squeeze(ObsValuesH(itime, :,:))';
-        zsq = squeeze(reshape(z,xDim*yDim,1));
+
+        z = squeeze(ObsValuesH(floor(itime/5), :,:))';
+        z = squeeze(reshape(z,xDim*yDim,1));
         
         % measurement error and covariance
         gama = zeros(num_elems) + .01*randn(num_elems);   % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
@@ -313,7 +314,7 @@ for itime = 1 : time
                 %                     if abs((H(q+1,p+1,s)-ObsValuesH(itime,q,p))) > 0.5
                 %                         (H(q+1,p+1,s)-ObsValuesH(itime,q,p))
                 %                     end
-                temp = temp +  (H(q+1,p+1,s)-ObsValuesH(itime,q,p))^2;
+                temp = temp +  (H(q+1,p+1,s)-ObsValuesH(floor(itime/5),q,p))^2;
             end
             RMS_H(itime,q,p) = sqrt(temp/Nens);
             temp = 0;
@@ -336,6 +337,7 @@ xtime = 1:time;
 
 for i = 1 : time
     RMSE(i) =  mean(mean(RMS_H(i,:,:)));
+    % RMSE(i) =  RMS_H(i,16,16);
 end
 
 %file = 'EnKF_error.mat';
@@ -408,7 +410,6 @@ top = title('Shallow Sea Sim Ensemble');
 return
 end
 
-<<<<<<< HEAD
 function check_std_dev(std_dev, center, max_vals)
 fprintf('Max is %d and min is %d \n',max(max_vals),min(max_vals))
 one_dev = 0;

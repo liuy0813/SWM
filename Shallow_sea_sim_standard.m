@@ -214,6 +214,7 @@ xtime = 1:time;
 
 for i = 1 : time
     RMSE(i) =  mean(mean(RMS_H(i,:,:)));
+    % RMSE(i) =  RMS_H(i,16,16);
 end
 
 

@@ -218,7 +218,7 @@ for itime = 1 : time
         tic;
         fprintf('Starting DA at time: %d \n', itime)
         % Observations at the end of the time interval
-        z = squeeze(ObsValuesH(itime, :,:))';
+        z = squeeze(ObsValuesH(floor(itime/5), :,:))';
         z = squeeze(reshape(z,4096,1));
         
         % measurement error and covariance
@@ -310,7 +310,7 @@ for itime = 1 : time
                 %                     if abs((H(q+1,p+1,s)-ObsValuesH(itime,q,p))) > 0.5
                 %                         (H(q+1,p+1,s)-ObsValuesH(itime,q,p))
                 %                     end
-                temp = temp +  (H(q+1,p+1,s)-ObsValuesH(itime,q,p))^2;
+                temp = temp +  (H(q+1,p+1,s)-ObsValuesH(floor(itime/5),q,p))^2;
             end
             RMS_H(itime,q,p) = sqrt(temp/Nens);
             temp = 0;
@@ -345,6 +345,7 @@ xtime = 1:time;
 
 for i = 1 : time
     RMSE(i) =  mean(mean(RMS_H(i,:,:)));
+    % RMSE(i) =  RMS_H(i,16,16);
 end
 
 %file = 'EnKF_error.mat';

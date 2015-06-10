@@ -133,10 +133,11 @@ for nstep = 1 : time
         
         
         % Save ref_mat
+        if mode(nstep,5) == 0
         ref_mat(k,nstep,:,:,1) = H(i,j,k);
         ref_mat(k,nstep,:,:,2) = U(i,j,k);
         ref_mat(k,nstep,:,:,3) = V(i,j,k);
-        
+        end
         
     end
     % Update plot

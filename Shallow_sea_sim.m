@@ -42,35 +42,35 @@ fprintf('Bulding Obs matrix for H...\n')
 ObsValuesH = importdata('OBS_matrix_H.mat','-mat');
 % ObsValuesU = importdata('OBS_matrix_U.mat','-mat');
 % ObsValuesV = importdata('OBS_matrix_V.mat','-mat');
-[~,Nvar,~] = size(ObsValuesH);
+[~,xDim,yDim] = size(ObsValuesH);
 
 
-num_elems =4096; % for now set state elements to 1, will be 3 in the end
 
-% Observation mapping operator, H is a fat short matrix
-
-Obs = 1 : num_elems; % Observe all, can change step size to alter frequency of observations
-H_Map = zeros(num_elems, num_elems);
-
-for i = 1 : num_elems
-    H_Map(i, Obs(i)) = 1;
-end
 
 %% define model enviornment
 g = 9.8;                 % gravitational constant
 dt = 0.02;               % hardwired timestep
 dx = 1.0;
 dy = 1.0;         % plot interval
+
 %ndrops = 5;              % maximum number of drops
 %dropstep = 500;          % drop interval
 
+%% Define DA constants
+num_elems =xDim*yDim; % number of elements in grid
+Obs = 1 : num_elems; % Observe all, can change step size to alter frequency of observations
+H_Map = zeros(num_elems, num_elems);
+
+for i = 1 : num_elems
+    H_Map(i, Obs(i)) = 1;
+end
 %% Initial Drop
 drop_dim = 21;
 D = zeros(21,21,Nens);  % create empty array for different drops
 
 for i = 1 : Nens
     center = 1.5;
-    std_dev = .5;% max size
+    std_dev = .3;% max size
     height = center + 1.75*std_dev*randn(1,1);   % initial value for droplet
     %note: 1.75 is a constant that makes final drop size close to normally
     %distributed - determined by testing different constants on 10,000 ens
@@ -80,35 +80,45 @@ end
 %% Make empty vector for RMSE of EnKF vs. REF
 
 RMSE = zeros(time,1);
-RMS_H = zeros(time,64,64);
+RMS_H = zeros(time,xDim,yDim);
 temp = 0;
 test_H_mean = zeros(time,1);
 test_H = zeros(time,1);
 
 %% Init. graphics
-[surfplot,top] = initgraphics(Nvar);
+[surfplot,top] = initgraphics(xDim);
 
 %% Init. timer
 tic;
 
 %% Create ensamble of zeros/ones to store models
 
-H = ones(Nvar+2,Nvar+2,Nens);   U = zeros(Nvar+2,Nvar+2,Nens);  V  = zeros(Nvar+2,Nvar+2,Nens);
-Hx  = zeros(Nvar+1,Nvar+1,Nens); Ux  = zeros(Nvar+1,Nvar+1,Nens); Vx  = zeros(Nvar+1,Nvar+1,Nens);
-Hy  = zeros(Nvar+1,Nvar+1,Nens); Uy  = zeros(Nvar+1,Nvar+1,Nens); Vy  = zeros(Nvar+1,Nvar+1,Nens);
+H = ones(xDim+2,yDim+2,Nens);   U = zeros(xDim+2,yDim+2,Nens);  V  = zeros(xDim+2,xDim+2,Nens);
+Hx  = zeros(xDim+1,yDim+1,Nens); Ux  = zeros(xDim+1,yDim+1,Nens); Vx  = zeros(xDim+1,xDim+1,Nens);
+Hy  = zeros(xDim+1,yDim+1,Nens); Uy  = zeros(xDim+1,yDim+1,Nens); Vy  = zeros(xDim+1,xDim+1,Nens);
 
 
 %% Run Shallow Water Model
 for itime = 1 : time
     
-    % Output first 5 loops
+    %% Update plot
+    
+    test_H_mean(itime)  = mean(H(16,16,:));
+    test_H(itime)  = H(16,16,Nens);
+    
+    C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
+    set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
+    set(top,'string',sprintf('step = %d',itime))
+    drawnow
+    
+    %% Output first 5 loops
     if mod(itime, 5) == 0
         fprintf('Current run: %d \n',itime)
         % Increase loop message frequency
     elseif itime <= 10
         fprintf('Current run: %d \n',itime)
     end
-    
+  
     
     
     
@@ -116,7 +126,7 @@ for itime = 1 : time
     % Nested loop for Ensembles
     for k = 1 : Nens
         
-        % initialize water drop
+        %% initialize water drop
         if itime == 1;
             w = size(D(:,:,k),1);
             i = 5 +(1:w);
@@ -128,25 +138,25 @@ for itime = 1 : time
         
         
         
-        % Reflective boundary conditions
+        %% Reflective boundary conditions
         H(:,1,k) = H(:,2,k);
         U(:,1,k) = U(:,2,k);
         V(:,1,k) = -V(:,2,k);
-        H(:,Nvar+2,k) = H(:,Nvar+1,k);
-        U(:,Nvar+2,k) = U(:,Nvar+1,k);
-        V(:,Nvar+2,k) = -V(:,Nvar+1,k);
+        H(:,yDim+2,k) = H(:,yDim+1,k);
+        U(:,yDim+2,k) = U(:,yDim+1,k);
+        V(:,yDim+2,k) = -V(:,yDim+1,k);
         H(1,:,k) = H(2,:,k);
         U(1,:,k) = -U(2,:,k);
         V(1,:,k) = V(2,:,k);
-        H(Nvar+2,:,k) = H(Nvar+1,:,k);
-        U(Nvar+2,:,k) = -U(Nvar+1,:,k);
-        V(Nvar+2,:,k) = V(Nvar+1,:,k);
+        H(xDim+2,:,k) = H(xDim+1,:,k);
+        U(xDim+2,:,k) = -U(xDim+1,:,k);
+        V(xDim+2,:,k) = V(xDim+1,:,k);
         
         %% Take a half time step to estimate derivatives at middle time.
         
         % x direction
-        i = 1:Nvar+1;
-        j = 1:Nvar;
+        i = 1:xDim+1;
+        j = 1:yDim;
         
         % height
         Hx(i,j,k) = (H(i+1,j+1,k)+H(i,j+1,k))/2 - dt/(2*dx)*(U(i+1,j+1,k)-U(i,j+1,k));
@@ -162,8 +172,8 @@ for itime = 1 : time
             (U(i,j+1,k).*V(i,j+1,k)./H(i,j+1,k)));
         
         % y direction
-        i = 1:Nvar;
-        j = 1:Nvar+1;
+        i = 1:xDim;
+        j = 1:yDim+1;
         
         % height
         Hy(i,j,k) = (H(i+1,j+1,k)+H(i+1,j,k))/2 - dt/(2*dy)*(V(i+1,j+1,k)-V(i+1,j,k));
@@ -179,8 +189,8 @@ for itime = 1 : time
         
         %% Now take a full step that uses derivatives at middle point.
         
-        i = 2:Nvar+1;
-        j = 2:Nvar+1;
+        i = 2:xDim+1;
+        j = 2:yDim+1;
         
         % height
         H(i,j,k) = H(i,j,k) - (dt/dx)*(Ux(i,j-1,k)-Ux(i-1,j-1,k)) - ...
@@ -200,29 +210,20 @@ for itime = 1 : time
         
         
         
-        %% Update plot
-        if mod(k,Nens) == 0
-            test_H_mean(itime)  = mean(H(16,16,:));
-            test_H(itime)  = H(16,16,Nens);
-            
-            C = abs(U(i,j,k)) + abs(V(i,j,k));  % Color shows momemtum
-            set(surfplot,'zdata',H(i,j,k),'cdata',C);
-            set(top,'string',sprintf('step = %d',itime))
-            drawnow
-        end
+        
         
     end
     
     %% Perform DA every obs_freq runs
-    if mod(itime,obs_freq) == 0
+    if itime == 50 %mod(itime,obs_freq) == 0
         tic;
         fprintf('Starting DA at time: %d \n', itime)
         % Observations at the end of the time interval
         z = squeeze(ObsValuesH(itime, :,:))';
-        z = squeeze(reshape(z,4096,1));
+        zsq = squeeze(reshape(z,xDim*yDim,1));
         
         % measurement error and covariance
-        gama = zeros(4096) + .01*randn(num_elems);   % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
+        gama = zeros(num_elems) + .01*randn(num_elems);   % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
         gama = squeeze(gama);
         Obs_cov = (gama * gama') / (Nens - 1);
         Obs_ens = zeros(num_elems, Nens);
@@ -230,7 +231,7 @@ for itime = 1 : time
         
         % perturbed measurement
         for i = 1 : Nens
-            Obs_ens(:,i) = z + gama(1);    %% Measurement Ensemble
+            Obs_ens(:,i) = zsq + gama(1);    %% Measurement Ensemble
         end
         
         
@@ -238,63 +239,58 @@ for itime = 1 : time
         
         OneN(1 : Nens, 1 : Nens) = 1 / Nens;
         Hpre = H;
-        H = permute(H,[1 2 3]);
-        H = reshape(H(2:65,2:65,:),(Nvar)^2,Nens);
+        Hperm = permute(H,[1 2 3]);
+        Hresh = reshape(Hperm(2:xDim+1,2:yDim+1,:),xDim*yDim,Nens);
         
-        Hbar   = H * OneN; % can't use three dimensions
-        Hprime = H - Hbar;
+        Hbar   = Hresh * OneN; % can't use three dimensions
+        Hprime = Hresh - Hbar;
         
         % Compute ensemble covariance matrix
         Ens_cov = (Hprime * Hprime') / (Nens - 1);
         
         M = Ens_cov + Obs_cov;   % Analysis equation
-        %size(M)
         
-        % Compute M inverse
-        %handling the singular values
-        %M
         
-
-        fprintf('Time up to this point: %d \n',toc ...
-            ,' Beginning svd calc \n')
-        tic; 
+        
+        fprintf('Beginning svd calc \n')
+        tic;
         [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
-         
-         
-         Xi = diag(S);% singular values
-         
-         nos = length(Xi);
-         
-         for jj = 1 : nos
-             if (Xi(jj) < Xi(1) / (10^6))
-                 Xi(jj) = 0;
-             else
-                 Xi(jj) = 1 / Xi(jj);
-             end
-         end
         
-         S = diag(Xi);
-         
-         fprintf('SVD time: %d calc starting mInverse \n',toc)
-         tic;
-         mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
         
-         fprintf('Done with inverse, creating analysis\n')
+        Xi = diag(S);% singular values
+        
+        nos = length(Xi);
+        
+        for jj = 1 : nos
+            if (Xi(jj) < Xi(1) / (10^6))
+                Xi(jj) = 0;
+            else
+                Xi(jj) = 1 / Xi(jj);
+            end
+        end
+        
+        S = diag(Xi);
+        
+        fprintf('SVD time: %d calc starting mInverse \n',toc)
+        tic;
+        mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
+        
+        fprintf('Done with inverse, creating analysis\n')
         % Data Assimilate
-        H = H + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * H) );
+        Hresh = Hresh + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * Hresh) );
         %H = H + (Obs_ens - H_Map * H);
         fprintf('Time for inverse+analysis: %d reshaping\n',toc)
         tic;
         
         % Reshape H back to 3 dimensions!!!
-        H = reshape(H,Nvar,Nvar,Nens);
+        H = reshape(Hresh,xDim,yDim,Nens);
         
-        B = zeros(Nvar+2,Nvar+2,Nens);
-        B(2:Nvar+1,2:Nvar+1,:)= H;
+        B = zeros(xDim+2,yDim+2,Nens);
+        B(2:xDim+1,2:yDim+1,:)= H;
         H = B;
         asdf = H - Hpre;
-        for x = 1:66
-            for y = 1:66
+        for x = 1:xDim+2
+            for y = 1:yDim+2
                 if asdf > 1
                     fprintf('x: %d, y: %d',asdf(x,y))
                 end
@@ -304,8 +300,8 @@ for itime = 1 : time
         
     end
     %% Calc Error
-    for q = 1:Nvar
-        for p = 1:Nvar
+    for q = 1:xDim
+        for p = 1:xDim
             for s = 1 : Nens
                 %                     if abs((H(q+1,p+1,s)-ObsValuesH(itime,q,p))) > 0.5
                 %                         (H(q+1,p+1,s)-ObsValuesH(itime,q,p))
@@ -316,23 +312,11 @@ for itime = 1 : time
             temp = 0;
         end
     end
-    if(itime == 1)
-        fprintf('Max is %d and min is %d \n',max(max_vals),min(max_vals))
-        one_dev = 0;
-        two_dev = 0;
-        three_dev = 0;
-        for itr = 1:Nens
-            if std_dev > abs(center - max_vals(itr)) 
-                one_dev = one_dev +1;
-            elseif std_dev > .5 * abs(center - max_vals(itr))
-                two_dev = two_dev + 1;
-            elseif std_dev > .25 *abs(center - max_vals(itr))
-                three_dev = three_dev + 1;
-            end 
-        end
-        two_dev = two_dev+one_dev;
-        three_dev = two_dev+three_dev;
-        fprintf('One %d , two %d , three %d \n', one_dev, two_dev, three_dev);
+    
+    %% Check distribution
+    
+    if(true & itime == 1)
+        check_std_dev(std_dev,center,max_vals)
     end
 end
 disp('Run time.....');
@@ -409,10 +393,29 @@ grid off
 axis([0 1 0 1 -1 3])
 caxis([-1 1])
 shading faceted
-c = (1:64)'/64;
+c = (1:64)'/64; %not sure if this should be x or y dim
 cyan = [c*0 c c];
 colormap(winter)
 top = title('Shallow Sea Sim Ensemble');
 
 return
+end
+
+function check_std_dev(std_dev, center, max_vals)
+fprintf('Max is %d and min is %d \n',max(max_vals),min(max_vals))
+one_dev = 0;
+two_dev = 0;
+three_dev = 0;
+for itr = 1:size(max_vals,1)
+    if std_dev > abs(center - max_vals(itr))
+        one_dev = one_dev +1;
+    elseif std_dev > .5 * abs(center - max_vals(itr))
+        two_dev = two_dev + 1;
+    elseif std_dev > .25 *abs(center - max_vals(itr))
+        three_dev = three_dev + 1;
+    end
+end
+two_dev = two_dev+one_dev;
+three_dev = two_dev+three_dev;
+fprintf('One %d , two %d , three %d \n', one_dev, two_dev, three_dev);
 end

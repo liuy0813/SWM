@@ -1,6 +1,7 @@
 function waterwave (Nens,time, obs_freq) %Drop_height, time
-
+close all 
 clc
+
 
 % WATER WAVE
 % 2D Shallow Water Model
@@ -366,8 +367,6 @@ function D = droplet ( height, width )
 
 D = height * exp ( -5 * ( x.^2 + y.^2 ) );
 
-height
-max(max(D))
 return
 end
 

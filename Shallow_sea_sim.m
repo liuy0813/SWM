@@ -213,8 +213,8 @@ for itime = 1 : time
         Obs_ens = zeros(num_elems, Nens);
         
         % perturbed measurement
-        for i = 1 : Nens
-            Obs_ens(:,i) = zsq + gama(1);    %% Measurement Ensemble
+        for ens = 1 : Nens
+            Obs_ens(:,ens) = zsq + gama(1);    %% Measurement Ensemble
         end
         
         % Reshape data into one column
@@ -253,7 +253,7 @@ for itime = 1 : time
         S = diag(Xi);
 
         
-        fprintf('SVD time: %n calc starting mInverse \n',toc)
+        fprintf('SVD time: %d calc starting mInverse \n',toc)
         tic;
         mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
         
@@ -294,8 +294,9 @@ for itime = 1 : time
             temp = 0;
         end
     end
-        %% Update plot
-    
+    %% Update plot
+    i = 2:xDim+1;
+    j = 2:yDim+1;
     test_H_mean(itime)  = mean(H(16,16,:));
     test_H(itime)  = H(16,16,Nens);
     

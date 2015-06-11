@@ -29,6 +29,7 @@ clc
 %    http://www.amath.washington.edu/~rjl/research/tsunamis
 %    http://www.amath.washington.edu/~dgeorge/tsunamimodeling.html
 %    http://www.amath.washington.edu/~claw/applications/shallow/www
+nargin
 
 if (isempty(Nens) || isempty(time))
     Nens = 5;
@@ -106,15 +107,7 @@ Hy  = zeros(xDim+1,yDim+1,Nens); Uy  = zeros(xDim+1,yDim+1,Nens); Vy  = zeros(xD
 %% Run Shallow Water Model
 for itime = 1 : time
     
-    %% Update plot
-    
-    test_H_mean(itime)  = mean(H(16,16,:));
-    test_H(itime)  = H(16,16,Nens);
-    
-    C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
-    set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
-    set(top,'string',sprintf('step = %d',itime))
-    drawnow
+
     
     %% Output first 5 loops
     if mod(itime, 5) == 0
@@ -320,12 +313,21 @@ for itime = 1 : time
             temp = 0;
         end
     end
+        %% Update plot
+    
+    test_H_mean(itime)  = mean(H(16,16,:));
+    test_H(itime)  = H(16,16,Nens);
+    
+    C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
+    set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
+    set(top,'string',sprintf('step = %d',itime))
+    drawnow
     
     %% Check distribution
     
     if(true & itime == 1)
         check_std_dev(std_dev,center,max_vals)
-    end
+    end 
 end
 disp('Run time.....');
 toc;

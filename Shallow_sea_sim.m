@@ -29,13 +29,15 @@ clc
 %    http://www.amath.washington.edu/~rjl/research/tsunamis
 %    http://www.amath.washington.edu/~dgeorge/tsunamimodeling.html
 %    http://www.amath.washington.edu/~claw/applications/shallow/www
-nargin
-
-if (isempty(Nens) || isempty(time))
-    Nens = 5;
-    time = 100;
-end
-
+ 
+%% Deffault arguments
+if nargin == 0
+     Nens = 5
+     time = 100
+     obs_freq = 20
+ end
+     
+%%
 fprintf('Bulding Obs matrix for H...\n')
 %% define conditions of ensamble
 
@@ -44,10 +46,6 @@ ObsValuesH = importdata('OBS_matrix_H.mat','-mat');
 % ObsValuesU = importdata('OBS_matrix_U.mat','-mat');
 % ObsValuesV = importdata('OBS_matrix_V.mat','-mat');
 [~,xDim,yDim] = size(ObsValuesH);
-
-
-
-
 
 %% define model enviornment
 
@@ -92,7 +90,6 @@ test_H = zeros(time,1);
 %% Init. graphics
 [surfplot,top] = initgraphics(xDim);
 
-
 %% Init. timer
 
 tic;
@@ -106,9 +103,6 @@ Hy  = zeros(xDim+1,yDim+1,Nens); Uy  = zeros(xDim+1,yDim+1,Nens); Vy  = zeros(xD
 
 %% Run Shallow Water Model
 for itime = 1 : time
-    
-
-    
     %% Output first 5 loops
     if mod(itime, 5) == 0
         fprintf('Current run: %d \n',itime)
@@ -130,12 +124,8 @@ for itime = 1 : time
             i = 5 +(1:w);
             j = 5 +(1:w);
             H(i,j,k) = H(i,j,k) + 0.5*D(:,:,k);
-            max_vals(k) = max(max(H(:,:,k)));
-            
+            max_vals(k) = max(max(H(:,:,k)));        
         end
-
-        
-        
         
         %% Reflective boundary conditions
         H(:,1,k) = H(:,2,k);
@@ -203,14 +193,7 @@ for itime = 1 : time
         V(i,j,k) = V(i,j,k) - (dt/dx)*((Ux(i,j-1,k).*Vx(i,j-1,k)./Hx(i,j-1,k)) - ...
             (Ux(i-1,j-1,k).*Vx(i-1,j-1,k)./Hx(i-1,j-1,k))) ...
             - (dt/dy)*((Vy(i-1,j,k).^2./Hy(i-1,j,k) + g/2*Hy(i-1,j,k).^2) - ...
-            (Vy(i-1,j-1,k).^2./Hy(i-1,j-1,k) + g/2*Hy(i-1,j-1,k).^2));
-        
-        
-        
-        
-        
-        
-        
+            (Vy(i-1,j-1,k).^2./Hy(i-1,j-1,k) + g/2*Hy(i-1,j-1,k).^2));  
     end
     
     %% Perform DA every obs_freq runs
@@ -228,14 +211,12 @@ for itime = 1 : time
         Obs_cov = (gama * gama') / (Nens - 1);
         Obs_ens = zeros(num_elems, Nens);
         
-        
         % perturbed measurement
         for i = 1 : Nens
             Obs_ens(:,i) = zsq + gama(1);    %% Measurement Ensemble
         end
         
-        
-        % Compute ensemble
+        % Reshape data into one column
         
         OneN(1 : Nens, 1 : Nens) = 1 / Nens;
         Hpre = H;
@@ -250,8 +231,7 @@ for itime = 1 : time
         
         M = Ens_cov + Obs_cov;   % Analysis equation
         
-        
-        
+        %Do svd calc for inverse - takes most time of all assimilation
         fprintf('Beginning svd calc \n')
         tic;
         [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
@@ -307,7 +287,7 @@ for itime = 1 : time
                 %                     if abs((H(q+1,p+1,s)-ObsValuesH(itime,q,p))) > 0.5
                 %                         (H(q+1,p+1,s)-ObsValuesH(itime,q,p))
                 %                     end
-                temp = temp +  (H(q+1,p+1,s)-ObsValuesH(floor(itime/5),q,p))^2;
+                temp = temp +  (H(q+1,p+1,s)-ObsValuesH(ceil(itime/5),q,p))^2;
             end
             RMS_H(itime,q,p) = sqrt(temp/Nens);
             temp = 0;
@@ -412,6 +392,7 @@ top = title('Shallow Sea Sim Ensemble');
 return
 end
 
+%-------------------------------------
 function check_std_dev(std_dev, center, max_vals)
 fprintf('Max is %d and min is %d \n',max(max_vals),min(max_vals))
 one_dev = 0;

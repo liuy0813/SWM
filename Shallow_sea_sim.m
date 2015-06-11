@@ -1,8 +1,7 @@
 function waterwave (Nens,time, obs_freq) %Drop_height, time
-%
-%  clear all
-% close all
+
 clc
+
 % WATER WAVE
 % 2D Shallow Water Model
 %
@@ -72,11 +71,12 @@ D = zeros(21,21,Nens);  % create empty array for different drops
 
 for i = 1 : Nens
     center = 1.5;
-    std_dev = .3;% max size
-    height = center + 1.75*std_dev*randn(1,1);   % initial value for droplet
-    %note: 1.75 is a constant that makes final drop size close to normally
-    %distributed - determined by testing different constants on 10,000 ens
-    D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
+    std_dev = .1;% max size
+    height = center - 1  + std_dev*randn(1,1); % highest point of droplet
+    %the initial drop is added onto water of height 1 
+    %so 1 is subtracted from center
+    
+    D(:,:,i) = droplet(height,drop_dim); %create gaussian droplet
 end
 
 %% Make empty vector for RMSE of EnKF vs. REF
@@ -123,7 +123,7 @@ for itime = 1 : time
             w = size(D(:,:,k),1);
             i = 5 +(1:w);
             j = 5 +(1:w);
-            H(i,j,k) = H(i,j,k) + 0.5*D(:,:,k);
+            H(i,j,k) = H(i,j,k) + D(:,:,k);
             max_vals(k) = max(max(H(:,:,k)));        
         end
         
@@ -197,13 +197,13 @@ for itime = 1 : time
     end
     
     %% Perform DA every obs_freq runs
-    if itime == 50 %mod(itime,obs_freq) == 0
+    if mod(itime,obs_freq) == 0
         tic;
         fprintf('Starting DA at time: %d \n', itime)
         % Observations at the end of the time interval
 
         z = squeeze(ObsValuesH(floor(itime/5), :,:))';
-        z = squeeze(reshape(z,xDim*yDim,1));
+        zsq = squeeze(reshape(z,xDim*yDim,1));
         
         % measurement error and covariance
         gama = zeros(num_elems) + .01*randn(num_elems);   % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
@@ -252,7 +252,7 @@ for itime = 1 : time
         S = diag(Xi);
 
         
-        fprintf('SVD time: %d calc starting mInverse \n',toc)
+        fprintf('SVD time: %n calc starting mInverse \n',toc)
         tic;
         mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
         
@@ -365,6 +365,9 @@ function D = droplet ( height, width )
 [ x, y ] = ndgrid ( -1:(2/(width-1)):1 );
 
 D = height * exp ( -5 * ( x.^2 + y.^2 ) );
+
+height
+max(max(D))
 return
 end
 

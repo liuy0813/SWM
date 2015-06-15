@@ -1,6 +1,8 @@
 function waterwave (Nens,time, obs_freq) %Drop_height, time
-close all 
+close all
 clc
+
+
 
 
 % WATER WAVE
@@ -29,14 +31,14 @@ clc
 %    http://www.amath.washington.edu/~rjl/research/tsunamis
 %    http://www.amath.washington.edu/~dgeorge/tsunamimodeling.html
 %    http://www.amath.washington.edu/~claw/applications/shallow/www
- 
+
 %% Deffault arguments
 if nargin == 0
-     Nens = 5
-     time = 100
-     obs_freq = 20
- end
-     
+    Nens = 15
+    time = 100
+    obs_freq = 20
+end
+
 %%
 fprintf('Bulding Obs matrix for H...\n')
 %% define conditions of ensamble
@@ -74,7 +76,7 @@ for i = 1 : Nens
     center = 1.5;
     std_dev = .1;% max size
     height = center - 1  + std_dev*randn(1,1); % highest point of droplet
-    %the initial drop is added onto water of height 1 
+    %the initial drop is added onto water of height 1
     %so 1 is subtracted from center
     
     D(:,:,i) = droplet(height,drop_dim); %create gaussian droplet
@@ -87,6 +89,23 @@ RMS_H = zeros(time,xDim,yDim);
 temp = 0;
 test_H_mean = zeros(time,1);
 test_H = zeros(time,1);
+
+%% KLDiv mat
+KL_Avg = zeros(floor(time/obs_freq),1);
+
+% amat = ones(Nens,1);
+% amat(1) = 3;
+% amat(5) = 6;
+% amat(7) = .3;
+% bmat = ones(Nens,1);
+% bmat(2) = .6;
+% bmat(8) = 5;
+% bmat(7) = 3;
+% bmat(9) = 1.2;
+% bmat(10) = 4;
+% ahist = makeHist(amat,bmat)
+% bhist = makeHist(bmat,amat)
+% c = KLDiv(ahist,bhist)
 
 %% Init. graphics
 [surfplot,top] = initgraphics(xDim);
@@ -111,8 +130,8 @@ for itime = 1 : time
     elseif itime <= 10
         fprintf('Current run: %d \n',itime)
     end
-  
-   
+    
+    
     
     
     max_vals = zeros(Nens,1);
@@ -125,7 +144,7 @@ for itime = 1 : time
             i = 5 +(1:w);
             j = 5 +(1:w);
             H(i,j,k) = H(i,j,k) + D(:,:,k);
-            max_vals(k) = max(max(H(:,:,k)));        
+            max_vals(k) = max(max(H(:,:,k)));
         end
         
         %% Reflective boundary conditions
@@ -194,7 +213,7 @@ for itime = 1 : time
         V(i,j,k) = V(i,j,k) - (dt/dx)*((Ux(i,j-1,k).*Vx(i,j-1,k)./Hx(i,j-1,k)) - ...
             (Ux(i-1,j-1,k).*Vx(i-1,j-1,k)./Hx(i-1,j-1,k))) ...
             - (dt/dy)*((Vy(i-1,j,k).^2./Hy(i-1,j,k) + g/2*Hy(i-1,j,k).^2) - ...
-            (Vy(i-1,j-1,k).^2./Hy(i-1,j-1,k) + g/2*Hy(i-1,j-1,k).^2));  
+            (Vy(i-1,j-1,k).^2./Hy(i-1,j-1,k) + g/2*Hy(i-1,j-1,k).^2));
     end
     
     %% Perform DA every obs_freq runs
@@ -202,8 +221,8 @@ for itime = 1 : time
         tic;
         fprintf('Starting DA at time: %d \n', itime)
         % Observations at the end of the time interval
-
-        z = squeeze(ObsValuesH(floor(itime/5), :,:))';
+        
+        z = squeeze(ObsValuesH(ceil(itime/5), :,:))';
         zsq = squeeze(reshape(z,xDim*yDim,1));
         
         % measurement error and covariance
@@ -235,32 +254,32 @@ for itime = 1 : time
         %Do svd calc for inverse - takes most time of all assimilation
         fprintf('Beginning svd calc \n')
         tic;
-        [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
-        
-        
-        Xi = diag(S);% singular values
-        
-        nos = length(Xi);
-        
-        for jj = 1 : nos
-            if (Xi(jj) < Xi(1) / (10^6))
-                Xi(jj) = 0;
-            else
-                Xi(jj) = 1 / Xi(jj);
-            end
-        end
-        
-        S = diag(Xi);
-
-        
-        fprintf('SVD time: %d calc starting mInverse \n',toc)
-        tic;
-        mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
-        
-        fprintf('Done with inverse, creating analysis\n')
-        % Data Assimilate
-        Hresh = Hresh + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * Hresh) );
-        %H = H + (Obs_ens - H_Map * H);
+        %         [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
+        %
+        %
+        %         Xi = diag(S);% singular values
+        %
+        %         nos = length(Xi);
+        %
+        %         for jj = 1 : nos
+        %             if (Xi(jj) < Xi(1) / (10^6))
+        %                 Xi(jj) = 0;
+        %             else
+        %                 Xi(jj) = 1 / Xi(jj);
+        %             end
+        %         end
+        %
+        %         S = diag(Xi);
+        %
+        %
+        %         fprintf('SVD time: %d calc starting mInverse \n',toc)
+        %         tic;
+        %         mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
+        %
+        %         fprintf('Done with inverse, creating analysis\n')
+        %         % Data Assimilate
+        %         Hresh = Hresh + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * Hresh) );
+        Hresh = Hresh + .5*(Obs_ens - H_Map * Hresh);
         fprintf('Time for inverse+analysis: %d reshaping\n',toc)
         tic;
         
@@ -278,6 +297,9 @@ for itime = 1 : time
                 end
             end
         end
+        %% Do KLDiv
+        KL_Avg(floor(itime/obs_freq)) = getKLD(Hpre,H)
+        
         fprintf('Done with DA. Time to end: %d \n',toc)
         
     end
@@ -305,11 +327,13 @@ for itime = 1 : time
     set(top,'string',sprintf('step = %d',itime))
     drawnow
     
+    
     %% Check distribution
     
     if(true & itime == 1)
         check_std_dev(std_dev,center,max_vals)
-    end 
+    end
+    
 end
 disp('Run time.....');
 toc;
@@ -327,6 +351,8 @@ end
 %file = 'EnKF_error.mat';
 save('EnKF_error.mat','RMSE');
 save('drops.mat', 'D');
+fprintf('kld')
+KL_Avg
 
 %% Plot results and error
 figure(1)
@@ -395,6 +421,68 @@ top = title('Shallow Sea Sim Ensemble');
 return
 end
 
+%----------------------------------------
+function KL = getKLD(Hpre,H)
+ %bins = numbe of ensembles / 3
+xDim = size(H,1)-2;
+yDim = size(H,2)-2;
+KLs = zeros(xDim,yDim);
+% for x = 2 : 3
+%     for y = 2 : 3
+        Hpre(16,16,:)
+        H(16,16,:)
+        a = makeHist(Hpre(16,16,:),H(16,16,:));
+        b = makeHist(H(16,16,:),Hpre(16,16,:));
+        a
+        b
+        KLDiv(a,b)
+        KLs(16-1,16-1) = squeeze(KLDiv(b,a));
+%     end
+% end
+KL = mean(mean(KLs));
+end
+
+function histo = makeHist(a,b)
+%% create histogram of a based of data from a and b
+a = squeeze(a);
+b = squeeze(b);
+assert(size(a,1) == size(b,1),'Input size does not match in makeHist');
+
+
+minV = min(min(a,b))
+maxV = max(max(a,b))
+
+Nens = size(a,1);
+bin_num = floor(Nens/3); % if we have fewer bins the data will be quite spread
+assert( bin_num >= 3,'Below minimum number in ensemble to make histogram');
+%we may want to alter this value
+if minV == maxV 
+    fprintf('Making histogram with only one point')
+    histo = ones(1,bin_num);
+    return
+end
+
+
+bin_size = (maxV-minV)/bin_num;
+
+assert(bin_size > 0);
+
+histA = zeros(1,bin_num);
+
+for i = 1:Nens
+    diff = a(i) - minV;
+    loc = ceil(diff/bin_size); %not using ceil for elem = minV
+    if loc == 0
+        assert(a(i) == minV,'Got a loc = 0 for something not minV');
+        loc = 1;
+    end
+    histA(1,loc) = histA(1,loc) + 1;
+end
+
+
+histo = histA;
+
+end
 %-------------------------------------
 function check_std_dev(std_dev, center, max_vals)
 fprintf('Max is %d and min is %d \n',max(max_vals),min(max_vals))

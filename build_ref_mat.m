@@ -1,6 +1,6 @@
 function build_ref_mat(Nens,time)
 
-ref_mat = zeros(Nens,time,64,64,3);
+ref_mat = zeros(Nens,time,64,64);
 
 % timing
 
@@ -13,10 +13,13 @@ dy = 1.0;
 drop_dim = 21;
 D = zeros(21,21,Nens);  % create empty array for different drops
 for i = 1 : Nens
-    a = 1.45;                  % min size
-    b = 1.55;                  % max size
-    height = (b-a).*randn(1,1) + a;   % initial drop size
-    D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
+ center = 1.5;
+    std_dev = .1;% max size
+    height = center - 1  + std_dev*randn(1,1); % highest point of droplet
+    %the initial drop is added onto water of height 1 
+    %so 1 is subtracted from center
+    
+    D(:,:,i) = droplet(height,drop_dim); %create gaussian droplet
 end
 %% Init. graphics
 [surfplot,top] = initgraphics(n);
@@ -44,9 +47,8 @@ H = ones(n+2,n+2,Nens);   U = zeros(n+2,n+2,Nens);  V  = zeros(n+2,n+2,Nens);
 Hx  = zeros(n+1,n+1,Nens); Ux  = zeros(n+1,n+1,Nens); Vx  = zeros(n+1,n+1,Nens);
 Hy  = zeros(n+1,n+1,Nens); Uy  = zeros(n+1,n+1,Nens); Vy  = zeros(n+1,n+1,Nens);
 
-
-%ndrop = ceil(rand*ndrops);
-% nstep = 0;
+% Matrix for storing vals
+mean_H = zeros(time,64,64);
 
 % Inner loop, time steps.
 
@@ -66,7 +68,7 @@ for nstep = 1 : time
             w = size(D(:,:,k),1);
             i = 5 +(1:w);
             j = 5 +(1:w);
-            H(i,j,k) = H(i,j,k) + 0.5*D(:,:,k);
+            H(i,j,k) = H(i,j,k) + D(:,:,k);
         end
         
         % Reflective boundary conditions
@@ -133,20 +135,26 @@ for nstep = 1 : time
         
         
         % Save ref_mat
-        if mode(nstep,5) == 0
-        ref_mat(k,nstep,:,:,1) = H(i,j,k);
-        ref_mat(k,nstep,:,:,2) = U(i,j,k);
-        ref_mat(k,nstep,:,:,3) = V(i,j,k);
-        end
+%         if mode(nstep,5) == 0
+        ref_mat(k,nstep,:,:) = H(i,j,k);
+%         ref_mat(k,nstep,:,:,2) = U(i,j,k);
+%         ref_mat(k,nstep,:,:,3) = V(i,j,k);
+%         end
+        
+        % take average of ensemble
+       
         
     end
+     % take average of ensemble
+    Ens_H = ref_mat(:,nstep,:,:);
+    mean_H(nstep,:,:) = squeeze(mean(Ens_H,1));
+    
     % Update plot
-    if mod(k,Nens) == 0
         C = abs(U(i,j,k)) + abs(V(i,j,k));  % Color shows momemtum
         set(surfplot,'zdata',H(i,j,k),'cdata',C);
         set(top,'string',sprintf('step = %d',nstep))
         drawnow
-    end
+
     
 end
 
@@ -155,7 +163,8 @@ end
 % fprintf('Total time: %2.5f', runtime);
 
 % save matrix
-save('REF_matrix.mat','ref_mat')
+save('OBS_matrix_H.mat','mean_H')
+% save('REF_matrix.mat','ref_mat')
 end
 
 

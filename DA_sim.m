@@ -43,9 +43,9 @@ fprintf('Bulding Obs matrix for H...\n')
 %% define conditions of ensamble
 
 
-ObsValuesH = importdata('OBS_matrix_H.mat','-mat');
-% ObsValuesU = importdata('OBS_matrix_U.mat','-mat');
-% ObsValuesV = importdata('OBS_matrix_V.mat','-mat');
+ObsValuesH = importdata('Data/OBS_matrix_H.mat','-mat');
+% ObsValuesU = importdata('Data/OBS_matrix_U.mat','-mat');
+% ObsValuesV = importdata('Data/OBS_matrix_V.mat','-mat');
 [~,xDim,yDim] = size(ObsValuesH);
 
 %% define model enviornment
@@ -99,7 +99,7 @@ test_H = zeros(time,1);
 
 markers = 1:obs_freq:time;
 
-distance = zeros(markers,1);
+distance = zeros(size(markers,1),1);
 % hist_prior = zeros(time,xDim,yDim,Nens);
 % hist_post= zeros(time,xDim,yDim,Nens);
 pdfs_prior = zeros(time/obs_freq,xDim,yDim,Nens);
@@ -329,7 +329,7 @@ for itime = 1 : time
             'bold');
         ylabel('likelyhood', 'fontsize', 15, 'fontweight', 'bold');
         xlabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
-        name=['fig',num2str(itime/obs_freq),'.png']; 
+        name=['Data/fig',num2str(itime/obs_freq),'.png']; 
         saveas(gca,name);
 %         figure('units','normalized','outerposition',[0 0 1 1])
     end
@@ -368,7 +368,7 @@ disp('Run time.....');
 toc;
 
 %% Save result for plotting and post-analysis purpose
-filename = 'EnKF_SWM.mat';
+filename = 'Data/EnKF_SWM.mat';
 save (filename);
 xtime = 1:time;
 
@@ -386,10 +386,10 @@ for i = obs_freq : obs_freq : time
     count = count + 1;
 end
 
-%file = 'EnKF_error.mat';
-save('EnKF_error.mat','RMSE');
-save('drops.mat', 'D');
-save('var_EnKF.mat','var_array');
+%file = 'Data/EnKF_error.mat';
+save('Data/EnKF_error.mat','RMSE');
+save('Data/drops.mat', 'D');
+save('Data/var_EnKF.mat','var_array');
 %% Plot results and error
 
 % add error bars for variance!!! var of ensemble

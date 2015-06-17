@@ -163,8 +163,8 @@ end
 % fprintf('Total time: %2.5f', runtime);
 
 % save matrix
-save('OBS_matrix_H.mat','mean_H')
-% save('REF_matrix.mat','ref_mat')
+save('Data/OBS_matrix_H.mat','mean_H')
+% save('Data/REF_matrix.mat','ref_mat')
 end
 
 

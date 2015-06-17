@@ -36,11 +36,11 @@ fprintf('loading data..\n')
 %% define conditions of ensamble
 
 
-ObsValuesH = importdata('OBS_matrix_H.mat','-mat');
-RMSE_EnKF = importdata('EnKF_error.mat','-mat');
-D = importdata('drops.mat','-mat');
-% ObsValuesU = importdata('OBS_matrix_U.mat','-mat');
-% ObsValuesV = importdata('OBS_matrix_V.mat','-mat');
+ObsValuesH = importdata('Data/OBS_matrix_H.mat','-mat');
+RMSE_EnKF = importdata('Data/EnKF_error.mat','-mat');
+D = importdata('Data/drops.mat','-mat');
+% ObsValuesU = importdata('Data/OBS_matrix_U.mat','-mat');
+% ObsValuesV = importdata('Data/OBS_matrix_V.mat','-mat');
 [~,Nvar,~] = size(ObsValuesH);
 
 RMSE = zeros(time,1);
@@ -199,7 +199,7 @@ disp('Run time.....');
 toc;
 
 %% Save result for plotting and post-analysis purpose
-filename = 'SWM_standard.mat';
+filename = 'Data/SWM_standard.mat';
 save (filename);
 
 xtime = 1:time;

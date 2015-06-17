@@ -102,8 +102,8 @@ markers = 1:obs_freq:time;
 distance = zeros(markers,1);
 % hist_prior = zeros(time,xDim,yDim,Nens);
 % hist_post= zeros(time,xDim,yDim,Nens);
-pdfs_prior = zeros(time,xDim,yDim,Nens);
-pdfs_post = zeros(time,xDim,yDim,Nens);
+pdfs_prior = zeros(time/obs_freq,xDim,yDim,Nens);
+pdfs_post = zeros(time/obs_freq,xDim,yDim,Nens);
 
 %% Init. graphics
 % [surfplot,top] = initgraphics(xDim);
@@ -310,10 +310,10 @@ for itime = 1 : time
                 x_vals = linspace(minV,maxV,Nens);
                 
                 pd1 = fitdist(squeeze(Hpre(q+1,p+1,:)), 'Normal');
-                pdfs_prior(itime,q,p,:) = pdf(pd1,x_vals);
+                pdfs_prior(itime/obs_freq,q,p,:) = pdf(pd1,x_vals);
                 
                 pd2 = fitdist(squeeze(H(q+1,p+1,:)), 'Normal');
-                pdfs_post(itime,q,p,:) = pdf(pd2,x_vals);
+                pdfs_post(itime/obs_freq,q,p,:) = pdf(pd2,x_vals);
                 if p == 16 && q == 16
                    pd1
                    pd2
@@ -323,7 +323,15 @@ for itime = 1 : time
         end
         
         figure(1)
-        plot(x_vals,squeeze(pdfs_prior(itime,16,16,:)),'b',x_vals,squeeze(pdfs_post(itime,16,16,:)),'r')
+        plot(x_vals,squeeze(pdfs_prior(itime/obs_freq,16,16,:)),'b',x_vals,squeeze(pdfs_post(itime/obs_freq,16,16,:)),'r', 'LineWidth', 2)
+        legend('PDF prior DA','PDF post DA')
+        title('Probability Density function before and after DA', 'fontsize', 20, 'fontweight', ...
+            'bold');
+        ylabel('likelyhood', 'fontsize', 15, 'fontweight', 'bold');
+        xlabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
+        name=['fig',num2str(itime/obs_freq),'.png']; 
+        saveas(gca,name);
+%         figure('units','normalized','outerposition',[0 0 1 1])
     end
     %% Calc Error
     for q = 1:xDim
@@ -345,10 +353,10 @@ for itime = 1 : time
     test_H_mean(itime)  = mean(H(16,16,:));
     test_H(itime)  = H(16,16,Nens);
     
-    C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
-    %     set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
-    %     set(top,'string',sprintf('step = %d',itime))
-    drawnow
+%     C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
+%     %     set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
+%     %     set(top,'string',sprintf('step = %d',itime))
+%     drawnow
     
     %% Check distribution
     
@@ -370,26 +378,13 @@ for i = 1 : time
 end
 
 count = 1;
-for i = 50 : obs_freq : time
-    x1 = squeeze((pdfs_post(i,16,16,:)))';
-    x2 = squeeze((pdfs_prior(i,16,16,:)))';
+for i = obs_freq : obs_freq : time
+    x1 = squeeze((pdfs_post(i/obs_freq,16,16,:)))';
+    x2 = squeeze((pdfs_prior(i/obs_freq,16,16,:)))';
     KLDiv(x1,x2)
-    distance(count) = KLDiv(x1,x2);
+    distance(count) = KLDiv(x1,x2)
     count = count + 1;
 end
-
-% for i = 1 : time
-%     for q = 1:xDim
-%         for p = 1:xDim
-% %             size(squeeze(hist_prior(i,q,p,:,:)))
-% %             size(squeeze(hist_post(i,q,p,:,:)))
-%             distance(i,q,p) = KLD(squeeze(hist_prior(i,q,p,:,:)), squeeze(hist_post(i,q,p,:,:)));
-%         end
-%     end
-% %      size(squeeze(hist_prior(i,q,p,:,:)))
-% %             size(squeeze(hist_post(i,q,p,:,:)))
-%      distance(i,q,p)
-% end
 
 %file = 'EnKF_error.mat';
 save('EnKF_error.mat','RMSE');
@@ -398,40 +393,38 @@ save('var_EnKF.mat','var_array');
 %% Plot results and error
 
 % add error bars for variance!!! var of ensemble
-figure(2)
-size(RMSE)
-plot(xtime,RMSE,'g','LineWidth',1)
-title('RMS Error of Reference Model', 'fontsize', 20, 'fontweight', ...
-    'bold');
-xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
-ylabel('RMSE', 'fontsize', 15, 'fontweight', 'bold');
-
-Obs_point = ObsValuesH(xtime,16,16);
-
-
-
-figure(3)
-plot(xtime,test_H_mean,'b',xtime,Obs_point,'r',markers,test_H_mean(markers),'b*') %,'LineWidth',1 ymarkers,test_H_mean(ymarkers),'m'
-legend('Mean Height of Ensemble','Observed Height','DA')
-legend
-title('')
-title('Mean Height of Ensemble compared to observation (at single point)', 'fontsize', 20, 'fontweight', ...
-    'bold');
-xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
-ylabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
-
-figure(4)
-plot(xtime,test_H,'b',xtime,Obs_point,'r',markers,test_H(markers),'b*') % ,'LineWidth',1
-legend('Rand Height of Ensemble member','Observed Height','DA')
-title('Random ensemble member height compared to observation (at single point)', 'fontsize', 20, 'fontweight', ...
-    'bold');
-xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
-ylabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
+% figure(2)
+% size(RMSE)
+% plot(xtime,RMSE,'g','LineWidth',1)
+% title('RMS Error of Reference Model', 'fontsize', 20, 'fontweight', ...
+%     'bold');
+% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+% ylabel('RMSE', 'fontsize', 15, 'fontweight', 'bold');
+% 
+% Obs_point = ObsValuesH(xtime,16,16);
+% 
+% 
+% 
+% figure(3)
+% plot(xtime,test_H_mean,'b',xtime,Obs_point,'r',markers,test_H_mean(markers),'b*') %,'LineWidth',1 ymarkers,test_H_mean(ymarkers),'m'
+% legend('Mean Height of Ensemble','Observed Height','DA')
+% legend
+% title('')
+% title('Mean Height of Ensemble compared to observation (at single point)', 'fontsize', 20, 'fontweight', ...
+%     'bold');
+% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+% ylabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
+% 
+% figure(4)
+% plot(xtime,test_H,'b',xtime,Obs_point,'r',markers,test_H(markers),'b*') % ,'LineWidth',1
+% legend('Rand Height of Ensemble member','Observed Height','DA')
+% title('Random ensemble member height compared to observation (at single point)', 'fontsize', 20, 'fontweight', ...
+%     'bold');
+% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+% ylabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
 
 figure(5)
-size(distance)
-size(markers)
-plot(markers,distance,'b','LineWidth',1)
+plot(markers,distance,'b-*','LineWidth',2)
 title('Distance between hists prior and post DA', 'fontsize', 20, 'fontweight', ...
     'bold');
 xlabel('time', 'fontsize', 15, 'fontweight', 'bold');

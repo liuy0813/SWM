@@ -1,4 +1,4 @@
-function waterwave (Nens,time, obs_freq) %Drop_height, time
+function DA_sim(Nens,time, obs_freq) %Drop_height, time
 close all
 clc
 
@@ -32,11 +32,12 @@ clc
 %    http://www.amath.washington.edu/~dgeorge/tsunamimodeling.html
 %    http://www.amath.washington.edu/~claw/applications/shallow/www
 
+
 %% Deffault arguments
 if nargin == 0
-    Nens = 15
-    time = 100
-    obs_freq = 20
+    Nens = 20;
+    time = 1000;
+    obs_freq = 50;
 end
 
 %%
@@ -44,9 +45,9 @@ fprintf('Bulding Obs matrix for H...\n')
 %% define conditions of ensamble
 
 
-ObsValuesH = importdata('OBS_matrix_H.mat','-mat');
-% ObsValuesU = importdata('OBS_matrix_U.mat','-mat');
-% ObsValuesV = importdata('OBS_matrix_V.mat','-mat');
+ObsValuesH = importdata('Data/OBS_matrix_H.mat','-mat');
+% ObsValuesU = importdata('Data/OBS_matrix_U.mat','-mat');
+% ObsValuesV = importdata('Data/OBS_matrix_V.mat','-mat');
 [~,xDim,yDim] = size(ObsValuesH);
 
 %% define model enviornment
@@ -63,6 +64,7 @@ dy = 1.0;         % plot interval
 num_elems =xDim*yDim; % number of elements in grid
 Obs = 1 : num_elems; % Observe all, can change step size to alter frequency of observations
 H_Map = zeros(num_elems, num_elems);
+var_array = zeros(time,1);
 
 for i = 1 : num_elems
     H_Map(i, Obs(i)) = 1;
@@ -84,31 +86,31 @@ end
 
 %% Make empty vector for RMSE of EnKF vs. REF
 
+
+
 RMSE = zeros(time,1);
 RMS_H = zeros(time,xDim,yDim);
 temp = 0;
+temp2 = zeros(Nens,64,64);
 test_H_mean = zeros(time,1);
 test_H = zeros(time,1);
 
-%% KLDiv mat
-KL_Avg = zeros(floor(time/obs_freq),1);
 
-% amat = ones(Nens,1);
-% amat(1) = 3;
-% amat(5) = 6;
-% amat(7) = .3;
-% bmat = ones(Nens,1);
-% bmat(2) = .6;
-% bmat(8) = 5;
-% bmat(7) = 3;
-% bmat(9) = 1.2;
-% bmat(10) = 4;
-% ahist = makeHist(amat,bmat)
-% bhist = makeHist(bmat,amat)
-% c = KLDiv(ahist,bhist)
+%% variables for pdfs
+
+% Nbins = 10;
+
+markers = 1:obs_freq:time;
+
+distance = zeros(size(markers,1),1);
+% hist_prior = zeros(time,xDim,yDim,Nens);
+% hist_post= zeros(time,xDim,yDim,Nens);
+pdfs_prior = zeros(time/obs_freq,xDim,yDim,Nens);
+pdfs_post = zeros(time/obs_freq,xDim,yDim,Nens);
+
 
 %% Init. graphics
-[surfplot,top] = initgraphics(xDim);
+% [surfplot,top] = initgraphics(xDim);
 
 %% Init. timer
 
@@ -216,13 +218,18 @@ for itime = 1 : time
             (Vy(i-1,j-1,k).^2./Hy(i-1,j-1,k) + g/2*Hy(i-1,j-1,k).^2));
     end
     
+    
+    
     %% Perform DA every obs_freq runs
     if mod(itime,obs_freq) == 0
+        
+        
         tic;
         fprintf('Starting DA at time: %d \n', itime)
         % Observations at the end of the time interval
         
-        z = squeeze(ObsValuesH(ceil(itime/5), :,:))';
+
+        z = squeeze(ObsValuesH(itime, :,:))'; %check itime is properly done
         zsq = squeeze(reshape(z,xDim*yDim,1));
         
         % measurement error and covariance
@@ -254,32 +261,34 @@ for itime = 1 : time
         %Do svd calc for inverse - takes most time of all assimilation
         fprintf('Beginning svd calc \n')
         tic;
-        %         [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
-        %
-        %
-        %         Xi = diag(S);% singular values
-        %
-        %         nos = length(Xi);
-        %
-        %         for jj = 1 : nos
-        %             if (Xi(jj) < Xi(1) / (10^6))
-        %                 Xi(jj) = 0;
-        %             else
-        %                 Xi(jj) = 1 / Xi(jj);
-        %             end
-        %         end
-        %
-        %         S = diag(Xi);
-        %
-        %
-        %         fprintf('SVD time: %d calc starting mInverse \n',toc)
-        %         tic;
-        %         mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
-        %
-        %         fprintf('Done with inverse, creating analysis\n')
-        %         % Data Assimilate
-        %         Hresh = Hresh + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * Hresh) );
-        Hresh = Hresh + .5*(Obs_ens - H_Map * Hresh);
+
+%                 [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
+%         
+%         
+%                 Xi = diag(S);% singular values
+%         
+%                 nos = length(Xi);
+%         
+%                 for jj = 1 : nos
+%                     if (Xi(jj) < Xi(1) / (10^6))
+%                         Xi(jj) = 0;
+%                     else
+%                         Xi(jj) = 1 / Xi(jj);
+%                     end
+%                 end
+%         
+%                 S = diag(Xi);
+%         
+%         
+%                 fprintf('SVD time: %d calc starting mInverse \n',toc)
+%                 tic;
+%                 mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
+%         
+%                 fprintf('Done with inverse, creating analysis\n')
+%                 % Data Assimilate
+%                 Hresh = Hresh + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * Hresh) );
+        Hresh = Hresh + 0.2*(Obs_ens - H_Map * Hresh);
+
         fprintf('Time for inverse+analysis: %d reshaping\n',toc)
         tic;
         
@@ -302,44 +311,75 @@ for itime = 1 : time
         
         fprintf('Done with DA. Time to end: %d \n',toc)
         
+        % Store hist of H after DA
+        for q = 1:xDim
+            for p = 1:xDim
+                %                 hist_post(itime,q,p,:) = hist(H(q+1,p+1,:)); % hist on third dim, i.e. ensembles
+                minV = min(min(H(q+1,p+1,:),Hpre(q+1,p+1,:)));
+                maxV = max(max(H(q+1,p+1,:),Hpre(q+1,p+1,:)));
+                x_vals = linspace(minV,maxV,Nens);
+                
+                pd1 = fitdist(squeeze(Hpre(q+1,p+1,:)), 'Normal');
+                pdfs_prior(itime/obs_freq,q,p,:) = pdf(pd1,x_vals);
+                
+                pd2 = fitdist(squeeze(H(q+1,p+1,:)), 'Normal');
+                pdfs_post(itime/obs_freq,q,p,:) = pdf(pd2,x_vals);
+                if p == 16 && q == 16
+                   pd1
+                   pd2
+                end
+                
+            end
+        end
+        
+        figure(1)
+        plot(x_vals,squeeze(pdfs_prior(itime/obs_freq,16,16,:)),'b',x_vals,squeeze(pdfs_post(itime/obs_freq,16,16,:)),'r', 'LineWidth', 2)
+        legend('PDF prior DA','PDF post DA')
+        title('Probability Density function before and after DA', 'fontsize', 20, 'fontweight', ...
+            'bold');
+        ylabel('likelyhood', 'fontsize', 15, 'fontweight', 'bold');
+        xlabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
+        name=['Data/fig',num2str(itime/obs_freq),'.png']; 
+        saveas(gca,name);
+%         figure('units','normalized','outerposition',[0 0 1 1])
     end
     %% Calc Error
     for q = 1:xDim
         for p = 1:xDim
             for s = 1 : Nens
-                %                     if abs((H(q+1,p+1,s)-ObsValuesH(itime,q,p))) > 0.5
-                %                         (H(q+1,p+1,s)-ObsValuesH(itime,q,p))
-                %                     end
-                temp = temp +  (H(q+1,p+1,s)-ObsValuesH(ceil(itime/5),q,p))^2;
+                temp = temp +  (H(q+1,p+1,s)-ObsValuesH(itime,q,p))^2;
+                temp2(s,q,p) = H(q+1,p+1,s);
             end
             RMS_H(itime,q,p) = sqrt(temp/Nens);
             temp = 0;
         end
     end
+    
+    var_array(itime) = mean(mean(var(temp2)));
+    
     %% Update plot
     i = 2:xDim+1;
     j = 2:yDim+1;
     test_H_mean(itime)  = mean(H(16,16,:));
     test_H(itime)  = H(16,16,Nens);
     
-    C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
-    set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
-    set(top,'string',sprintf('step = %d',itime))
-    drawnow
+%     C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
+%     %     set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
+%     %     set(top,'string',sprintf('step = %d',itime))
+%     drawnow
     
     
     %% Check distribution
     
-    if(true & itime == 1)
+    if(true && itime == 1)
         check_std_dev(std_dev,center,max_vals)
     end
-    
 end
 disp('Run time.....');
 toc;
 
 %% Save result for plotting and post-analysis purpose
-filename = 'EnKF_SWM.mat';
+filename = 'Data/EnKF_SWM.mat';
 save (filename);
 xtime = 1:time;
 
@@ -348,41 +388,59 @@ for i = 1 : time
     % RMSE(i) =  RMS_H(i,16,16);
 end
 
-%file = 'EnKF_error.mat';
-save('EnKF_error.mat','RMSE');
-save('drops.mat', 'D');
-fprintf('kld')
-KL_Avg
+count = 1;
+for i = obs_freq : obs_freq : time
+    x1 = squeeze((pdfs_post(i/obs_freq,16,16,:)))';
+    x2 = squeeze((pdfs_prior(i/obs_freq,16,16,:)))';
+    KLDiv(x1,x2)
+    distance(count) = KLDiv(x1,x2)
+    count = count + 1;
+end
 
+
+%file = 'Data/EnKF_error.mat';
+save('Data/EnKF_error.mat','RMSE');
+save('Data/drops.mat', 'D');
+save('Data/var_EnKF.mat','var_array');
 %% Plot results and error
-figure(1)
-size(RMSE)
-plot(xtime,RMSE,'g','LineWidth',1)
-%axis([0 time -0.2 0.5])
-title('mean of RMS Error of Reference Model')
-xlabel('time')
-ylabel('RMSE')
 
-Obs_point = ObsValuesH(xtime,16,16);
+% add error bars for variance!!! var of ensemble
+% figure(2)
+% size(RMSE)
+% plot(xtime,RMSE,'g','LineWidth',1)
+% title('RMS Error of Reference Model', 'fontsize', 20, 'fontweight', ...
+%     'bold');
+% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+% ylabel('RMSE', 'fontsize', 15, 'fontweight', 'bold');
+% 
+% Obs_point = ObsValuesH(xtime,16,16);
+% 
+% 
+% 
+% figure(3)
+% plot(xtime,test_H_mean,'b',xtime,Obs_point,'r',markers,test_H_mean(markers),'b*') %,'LineWidth',1 ymarkers,test_H_mean(ymarkers),'m'
+% legend('Mean Height of Ensemble','Observed Height','DA')
+% legend
+% title('')
+% title('Mean Height of Ensemble compared to observation (at single point)', 'fontsize', 20, 'fontweight', ...
+%     'bold');
+% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+% ylabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
+% 
+% figure(4)
+% plot(xtime,test_H,'b',xtime,Obs_point,'r',markers,test_H(markers),'b*') % ,'LineWidth',1
+% legend('Rand Height of Ensemble member','Observed Height','DA')
+% title('Random ensemble member height compared to observation (at single point)', 'fontsize', 20, 'fontweight', ...
+%     'bold');
+% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+% ylabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
 
-ymarkers = 1:obs_freq:time;
-
-figure(2)
-plot(xtime,test_H_mean,'b',xtime,Obs_point,'r') %,'LineWidth',1 ymarkers,test_H_mean(ymarkers),'m'
-legend('Mean Height','Observed Height')
-legend
-axis([0 time 0 5])
-title('ENKF Compare ObsValuesH to H_mean')
-xlabel('time')
-ylabel('value')
-
-figure(3)
-plot(xtime,test_H,'b',xtime,Obs_point,'r') % ,'LineWidth',1
-legend('Rand Ens Height','Observed Height')
-axis([0 time 0 5])
-title('ENKF Compare ObsValuesH to some ens of H')
-xlabel('time')
-ylabel('value')
+figure(5)
+plot(markers,distance,'b-*','LineWidth',2)
+title('Distance between hists prior and post DA', 'fontsize', 20, 'fontweight', ...
+    'bold');
+xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+ylabel('distance/divergence', 'fontsize', 15, 'fontweight', 'bold');
 end
 % ------------------------------------
 
@@ -483,6 +541,7 @@ end
 histo = histA;
 
 end
+
 %-------------------------------------
 function check_std_dev(std_dev, center, max_vals)
 fprintf('Max is %d and min is %d \n',max(max_vals),min(max_vals))

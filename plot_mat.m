@@ -37,7 +37,7 @@ caxis([-1 1])
 shading faceted
 c = (1:64)'/64;
 cyan = [c*0 c c];
-colormap(hsv)
+colormap(cyan)
 top = title('Shallow Sea Sim Ensemble');
 
 return

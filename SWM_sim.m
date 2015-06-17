@@ -1,4 +1,4 @@
-function waterwave (Nens,time) %Drop_height, time
+function SWM_sim(Nens,time) %Drop_height, time
 
 % WATER WAVE
 % 2D Shallow Water Model
@@ -27,45 +27,34 @@ function waterwave (Nens,time) %Drop_height, time
 %    http://www.amath.washington.edu/~dgeorge/tsunamimodeling.html
 %    http://www.amath.washington.edu/~claw/applications/shallow/www
 
-if (isempty(Nens) || isempty(time))
-    Nens = 5;
-    time = 100;
+if nargin == 0
+    Nens = 20;
+    time = 1000;
 end
 
-fprintf('Bulding Obs matrix for H...\n')
+fprintf('loading data..\n')
 %% define conditions of ensamble
 
 
-ObsValuesH = importdata('OBS_matrix_H.mat','-mat');
-RMSE_EnKF = importdata('EnKF_error.mat','-mat');
-D = importdata('drops.mat','-mat');
-% ObsValuesU = importdata('OBS_matrix_U.mat','-mat');
-% ObsValuesV = importdata('OBS_matrix_V.mat','-mat');
+ObsValuesH = importdata('Data/OBS_matrix_H.mat','-mat');
+RMSE_EnKF = importdata('Data/EnKF_error.mat','-mat');
+D = importdata('Data/drops.mat','-mat');
+% ObsValuesU = importdata('Data/OBS_matrix_U.mat','-mat');
+% ObsValuesV = importdata('Data/OBS_matrix_V.mat','-mat');
 [~,Nvar,~] = size(ObsValuesH);
 
 RMSE = zeros(time,1);
 RMS_H = zeros(time,64,64);
 temp = 0;
+temp2 = zeros(Nens,64,64);
+var_array = zeros(time,1);
 
 %% define model enviornment
 g = 9.8;                 % gravitational constant
 dt = 0.02;               % hardwired timestep
 dx = 1.0;
 dy = 1.0;         % plot interval
-%ndrops = 5;              % maximum number of drops
-%dropstep = 500;          % drop interval
 
-%% Initial Drop
-% drop_dim = 21;
-% D = zeros(21,21,Nens);  % create empty array for different drops
-% 
-% for i = 1 : Nens
-%     a = 1.5;                  % min size
-%     b = 2.5;                  % max size
-%     height = (b-a).*randn(1,1) + a;   % initial drop size
-%     
-%     D(:,:,i) = droplet(height,drop_dim);     % simulate a water drop (size,???)
-% end
 
 %% Make empty vector for test points
 
@@ -104,7 +93,7 @@ for itime = 1 : time
             w = size(D(:,:,k),1);
             i = 5 +(1:w);
             j = 5 +(1:w);
-            H(i,j,k) = H(i,j,k) + 0.5*D(:,:,k);
+            H(i,j,k) = H(i,j,k) + D(:,:,k);
         end
         
       
@@ -196,18 +185,21 @@ for itime = 1 : time
             for p = 1:Nvar
                 for s = 1 : Nens
                     temp = temp +  (H(q+1,p+1,s)-ObsValuesH(itime,q,p))^2;
+                     temp2(s,q,p) = H(q+1,p+1,s);
                 end
                 RMS_H(itime,q,p) = sqrt(temp/Nens);
                 temp = 0;
             end
         end
+        var_array(itime) = mean(mean(var(temp2)));
+        
     end    
 end
 disp('Run time.....');
 toc;
 
 %% Save result for plotting and post-analysis purpose
-filename = 'SWM_standard.mat';
+filename = 'Data/SWM_standard.mat';
 save (filename);
 
 xtime = 1:time;
@@ -219,47 +211,43 @@ end
 
 
 %% Plot results and error
+
+markers = 50:50:time;
+size(markers)
+size(RMSE_EnKF(markers)')
 figure(1)
-plot(xtime,RMSE,'r',xtime,RMSE_EnKF,'b','LineWidth',1)
+plot(xtime,RMSE,'r',xtime,RMSE_EnKF,'b',markers,RMSE_EnKF(markers)','b*','LineWidth',1)
+errorbar(markers,RMSE(markers),var_array(markers),'r')
+legend('RMSE Standard','RMSE EnKF','DA','Location','northwest')
 %axis([0 time -0.2 0.5])
-title('mean of RMS Error of Reference Model')
-xlabel('time')
-ylabel('RMSE')
+title('Overall RMS Error of Standard vs. EnKF', 'fontsize', 20, 'fontweight', ...
+    'bold');
+xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+ylabel('RMSE', 'fontsize', 15, 'fontweight', 'bold');
 
 Obs_point = ObsValuesH(xtime,16,16);
+
 
 figure(2)
 plot(xtime,test_H_mean,'b',xtime,Obs_point,'r') %,'LineWidth',1
 legend('Mean Height','Observed Height')
-legend
 % axis([0 time 0 5])
-title('STANDARD Compare ObsValuesH to H_mean')
-xlabel('time')
-ylabel('value')
+title('STANDARD Compare ObsValuesH to H_mean', 'fontsize', 20, 'fontweight', ...
+    'bold');
+xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+ylabel('value', 'fontsize', 15, 'fontweight', 'bold');
 
 figure(3)
 plot(xtime,test_H,'b',xtime,Obs_point,'r') % ,'LineWidth',1
 legend('Rand Ens Height','Observed Height')
-axis([0 time 0 5])
-title('STANDARD Compare ObsValuesH to some ens of H')
-xlabel('time')
-ylabel('value')
-end
-% ------------------------------------
-
-function D = droplet ( height, width )
-
-% DROPLET  2D Gaussian
-% D = droplet(height,width)
-%
-[ x, y ] = ndgrid ( -1:(2/(width-1)):1 );
-
-D = height * exp ( -5 * ( x.^2 + y.^2 ) );
-
-return
+% axis([0 time 0 5])
+title('STANDARD Compare ObsValuesH random ensemble member', 'fontsize', 20, 'fontweight', ...
+    'bold');
+xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+ylabel('value', 'fontsize', 15, 'fontweight', 'bold');
 end
 
-% ------------------------------------
+
 function [surfplot,top] = initgraphics(n)
 
 % INITGRAPHICS  Initialize graphics for waterwave.

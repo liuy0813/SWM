@@ -99,7 +99,10 @@ test_H = zeros(time,1);
 
 markers = 1:obs_freq:time;
 
+ pdf_coords = zeros(size(markers,1), Nens);
 distance = zeros(size(markers,1),1);
+waterfall_data_pre = zeros(size(markers,1),Nens);
+waterfall_data_post = zeros(size(markers,1),Nens);
 % hist_prior = zeros(time,xDim,yDim,Nens);
 % hist_post= zeros(time,xDim,yDim,Nens);
 pdfs_prior = zeros(time/obs_freq,xDim,yDim,Nens);
@@ -309,12 +312,16 @@ for itime = 1 : time
                 maxV = max(max(H(q+1,p+1,:),Hpre(q+1,p+1,:)));
                 x_vals = linspace(minV,maxV,Nens);
                 
+                % Store pdf x coordinates to plot on singple graph
+                
                 pd1 = fitdist(squeeze(Hpre(q+1,p+1,:)), 'Normal');
                 pdfs_prior(itime/obs_freq,q,p,:) = pdf(pd1,x_vals);
                 
                 pd2 = fitdist(squeeze(H(q+1,p+1,:)), 'Normal');
                 pdfs_post(itime/obs_freq,q,p,:) = pdf(pd2,x_vals);
                 if p == 16 && q == 16
+                     size(minV:(maxV-minV)/(Nens-1):maxV)
+                pdf_coords(itime/obs_freq,:) = minV:(maxV-minV)/(Nens-1):maxV;
                    pd1
                    pd2
                 end
@@ -323,11 +330,13 @@ for itime = 1 : time
         end
         
         figure(1)
+        waterfall_data_pre(itime/obs_freq,:) = squeeze(pdfs_prior(itime/obs_freq,16,16,:));
+        waterfall_data_post(itime/obs_freq,:) = squeeze(pdfs_post(itime/obs_freq,16,16,:));
         plot(x_vals,squeeze(pdfs_prior(itime/obs_freq,16,16,:)),'b',x_vals,squeeze(pdfs_post(itime/obs_freq,16,16,:)),'r', 'LineWidth', 2)
         legend('PDF prior DA','PDF post DA')
         title('Probability Density function before and after DA', 'fontsize', 20, 'fontweight', ...
             'bold');
-        ylabel('likelyhood', 'fontsize', 15, 'fontweight', 'bold');
+        ylabel('probability', 'fontsize', 15, 'fontweight', 'bold');
         xlabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
         name=['Data/fig',num2str(itime/obs_freq),'.png']; 
         saveas(gca,name);
@@ -423,7 +432,24 @@ save('Data/var_EnKF.mat','var_array');
 % xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
 % ylabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
 
+y_coords = zeros(time/obs_freq,Nens);
+for i = 1 : time/obs_freq
+   y_coords(i,:) = i; 
+end
+
+C = colormap(hsv);
+
+figure(4)
+waterfall(pdf_coords,y_coords,squeeze(pdfs_prior(:,16,16,:)),C)
+legend('Height','Observation', 'Probability')
+title('Pdfs prior')
+
 figure(5)
+waterfall(pdf_coords,y_coords,squeeze(pdfs_post(:,16,16,:)),C)
+legend('Height','Observation', 'Probability')
+title('Pdfs post')
+
+figure(6)
 plot(markers,distance,'b-*','LineWidth',2)
 title('Distance between hists prior and post DA', 'fontsize', 20, 'fontweight', ...
     'bold');

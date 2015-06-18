@@ -306,31 +306,6 @@ for itime = 1 : time
                 end
             end
         end
-        %% Do KLDiv
-        KL_Avg(floor(itime/obs_freq)) = getKLD(Hpre,H)
-        
-        fprintf('Done with DA. Time to end: %d \n',toc)
-        
-        % Store hist of H after DA
-        for q = 1:xDim
-            for p = 1:xDim
-                %                 hist_post(itime,q,p,:) = hist(H(q+1,p+1,:)); % hist on third dim, i.e. ensembles
-                minV = min(min(H(q+1,p+1,:),Hpre(q+1,p+1,:)));
-                maxV = max(max(H(q+1,p+1,:),Hpre(q+1,p+1,:)));
-                x_vals = linspace(minV,maxV,Nens);
-                
-                pd1 = fitdist(squeeze(Hpre(q+1,p+1,:)), 'Normal');
-                pdfs_prior(itime/obs_freq,q,p,:) = pdf(pd1,x_vals);
-                
-                pd2 = fitdist(squeeze(H(q+1,p+1,:)), 'Normal');
-                pdfs_post(itime/obs_freq,q,p,:) = pdf(pd2,x_vals);
-                if p == 16 && q == 16
-                   pd1
-                   pd2
-                end
-                
-            end
-        end
         
         figure(1)
         plot(x_vals,squeeze(pdfs_prior(itime/obs_freq,16,16,:)),'b',x_vals,squeeze(pdfs_post(itime/obs_freq,16,16,:)),'r', 'LineWidth', 2)

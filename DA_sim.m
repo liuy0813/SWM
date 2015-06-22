@@ -93,8 +93,8 @@ RMSE = zeros(time,1);
 RMS_H = zeros(time,xDim,yDim);
 temp = 0;
 temp2 = zeros(Nens,xDim,yDim);
-test_H_mean = zeros(time,1);
-test_H = zeros(time,1);
+% test_H_mean = zeros(time,1);
+% test_H = zeros(time,1);
 
 
 %% variables for pdfs
@@ -105,7 +105,7 @@ markers = 1:obs_freq:time;
 
 pdf_coords = zeros(size(markers,1), Nens);
 distance = zeros(size(markers,1),1);
-hist_size = 50;
+hist_size = Nens;
 waterfall_data_pre = zeros(size(markers,1),hist_size);
 waterfall_data_post = zeros(size(markers,1),hist_size);
 % hist_prior = zeros(time,xDim,yDim,Nens);
@@ -239,8 +239,8 @@ for itime = 1 : time
         zsq = squeeze(reshape(z,xDim*yDim,1));
         
         % measurement error and covariance
-        error = 1;
-        gama = error*randn(num_elems,Nens);   % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
+        error = 0.05;
+        gama = repmat(error, num_elems, Nens);   % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
         
         
         Obs_cov = (gama * gama') / (Nens - 1);
@@ -248,7 +248,7 @@ for itime = 1 : time
         
         % perturbed measurement
         for ens = 1 : Nens
-            Obs_ens(:,ens) = zsq + gama(:,ens);    %% Measurement Ensemble
+            Obs_ens(:,ens) = zsq + error*randn(num_elems,1);    %% Measurement Ensemble
         end
         
         % Reshape data into one column
@@ -294,14 +294,19 @@ for itime = 1 : time
         mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
         
         fprintf('Done with inverse, creating analysis\n')
-        % Data Assimilate
-        diff = Obs_ens - H_Map * Hresh;
+        %% Data Assimilate
+        %         diff = Obs_ens - H_Map * Hresh;
+        
+         % Inflation code
+%         inf_factor = 1.5;
+%         Ens_cov = Ens_cov * inf_factor;
         
         Hresh = Hresh + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * Hresh) );
-        mInverse;
-        meaninverse = mean(mean(mInverse))
-        rangeinverse = mean(range(mInverse))
+        %         mInverse;
+        %         meaninverse = mean(mean(mInverse))
+        %         rangeinverse = mean(range(mInverse))
         %         Hresh = Hresh + 0.2*(Obs_ens - H_Map * Hresh);
+        
         fprintf('Time for inverse+analysis: %d reshaping\n',toc)
         
         
@@ -313,7 +318,7 @@ for itime = 1 : time
         B = zeros(xDim+2,yDim+2,Nens);
         B(2:xDim+1,2:yDim+1,:)= H;
         H = B;
-        asdf = H - Hpre;
+        %         asdf = H - Hpre;
         for ense = 1:Nens-1
             %                      for y = 1:yDim+2
             %                          if asdf > 1
@@ -399,10 +404,10 @@ for itime = 1 : time
     %% Update plot
     i = 2:xDim+1;
     j = 2:yDim+1;
-    test_H_mean(itime)  = mean(H(16,16,:));
-    test_H(itime)  = H(16,16,Nens);
-    
-    C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
+%     test_H_mean(itime)  = mean(H(16,16,:));
+%     test_H(itime)  = H(16,16,Nens);
+%     
+%     C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
     %     set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
     %     set(top,'string',sprintf('step = %d',itime))
     drawnow
@@ -417,10 +422,6 @@ end
 disp('Run time.....');
 toc;
 
-%% Save result for plotting and post-analysis purpose
-filename = 'Data/EnKF_SWM.mat';
-save (filename);
-xtime = 1:time;
 
 for i = 1 : time
     RMSE(i) =  mean(mean(RMS_H(i,:,:)));
@@ -437,10 +438,6 @@ for i = obs_freq : obs_freq : time
 end
 
 
-%file = 'Data/EnKF_error.mat';
-save('Data/EnKF_error.mat','RMSE');
-save('Data/drops.mat', 'D');
-save('Data/var_EnKF.mat','var_array');
 %% Plot results and error
 
 % add error bars for variance!!! var of ensemble
@@ -453,7 +450,7 @@ save('Data/var_EnKF.mat','var_array');
 % ylabel('RMSE', 'fontsize', 15, 'fontweight', 'bold');
 %
 % Obs_point = ObsValuesH(xtime,16,16);
-%
+% xtime = 1:time;
 %
 %
 % figure(3)
@@ -496,6 +493,13 @@ title('Distance between hists prior and post DA', 'fontsize', 20, 'fontweight', 
     'bold');
 xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
 ylabel('distance/divergence', 'fontsize', 15, 'fontweight', 'bold');
+
+%% Save result for plotting and post-analysis purpose
+filename = 'Data/EnKF_SWM.mat';
+save (filename);
+save('Data/EnKF_error.mat','RMSE');
+save('Data/drops.mat', 'D');
+save('Data/var_EnKF.mat','var_array');
 end
 % ------------------------------------
 

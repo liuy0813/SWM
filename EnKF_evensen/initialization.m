@@ -90,6 +90,7 @@ for j = 1 : Nens
     A(:, j) = ini_pert + ran_err(:, j);   % A: Nvar-by-Nens
 end
 
+
 % Mean of the initial ensemble.
 IniMean = mean(A, 2);
 

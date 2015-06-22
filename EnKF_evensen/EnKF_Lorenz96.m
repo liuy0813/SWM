@@ -3,7 +3,11 @@
 % function [R1, R2, RMS1, RMS2] = EnKF_Lorenz96(Nens)
 
 %% Initialize model parameters
+
+rng(3489234289)
 initialization;
+
+
 
 disp('EnKF ensemble.....');
 disp(['After ', num2str(spinup), ' spinup with ', ...
@@ -15,7 +19,7 @@ tic;
 
 % Integration from one obs. to another obs. point
 
-for itime = 2 : length(ObsPoints)
+for itime = 2 : 2% length(ObsPoints)
     % itime
     % Time interval
     % Tinterval = [ObsTimes(itime-1),ObsTimes(itime)];
@@ -82,10 +86,25 @@ for itime = 2 : length(ObsPoints)
     S = diag(Xi);
     
     mInverse = V * S * U';    % M inverse = V * inv(S) * U';
-     
+    Apre = A;
     A = A + Ens_cov * H' * ( mInverse * (Obs_ens - H * A) );
     
-    me = mean(Y, 3);
+   Obs_diff =  Obs_ens - Apre; 
+   asdf = mean(Obs_diff,2);
+  asdf1 = mean(Apre,2);
+   asdf2 = mean(A,2);
+   asdf(1,1)
+   asdf1(1,1)
+   asdf2(1,1)
+   0
+   DA_diff = A - Apre;
+   Obs_diff(1,1)
+   DA_diff(1,1)
+    
+    
+    me = mean(Y,3);
+   
+
     
     tAnalysis = [tAnalysis; Tgrid'] ;
     yAnalysis = [yAnalysis; me];   

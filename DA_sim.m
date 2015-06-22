@@ -36,9 +36,10 @@ clc
 %% Deffault arguments
 if nargin == 0
     Nens = 20;
-    time = 1000;
+    time = 200;
     obs_freq = 50;
 end
+fprintf('Running on %d ensemble size, for %d time\n',Nens,time)
 
 %%
 fprintf('Bulding Obs matrix for H...\n')
@@ -63,7 +64,7 @@ dy = 1.0;         % plot interval
 %% Define DA constants
 num_elems =xDim*yDim; % number of elements in grid
 Obs = 1 : num_elems; % Observe all, can change step size to alter frequency of observations
-H_Map = zeros(num_elems, num_elems);
+H_Map = zeros(num_elems);
 var_array = zeros(time,1);
 
 for i = 1 : num_elems
@@ -91,7 +92,7 @@ end
 RMSE = zeros(time,1);
 RMS_H = zeros(time,xDim,yDim);
 temp = 0;
-temp2 = zeros(Nens,64,64);
+temp2 = zeros(Nens,xDim,yDim);
 test_H_mean = zeros(time,1);
 test_H = zeros(time,1);
 
@@ -102,11 +103,16 @@ test_H = zeros(time,1);
 
 markers = 1:obs_freq:time;
 
+pdf_coords = zeros(size(markers,1), Nens);
 distance = zeros(size(markers,1),1);
+hist_size = 50;
+waterfall_data_pre = zeros(size(markers,1),hist_size);
+waterfall_data_post = zeros(size(markers,1),hist_size);
 % hist_prior = zeros(time,xDim,yDim,Nens);
 % hist_post= zeros(time,xDim,yDim,Nens);
-pdfs_prior = zeros(time/obs_freq,xDim,yDim,Nens);
-pdfs_post = zeros(time/obs_freq,xDim,yDim,Nens);
+
+pdfs_prior = zeros(time/obs_freq,xDim,yDim,hist_size);
+pdfs_post = zeros(time/obs_freq,xDim,yDim,hist_size);
 
 
 %% Init. graphics
@@ -233,14 +239,16 @@ for itime = 1 : time
         zsq = squeeze(reshape(z,xDim*yDim,1));
         
         % measurement error and covariance
-        gama = zeros(num_elems) + .01*randn(num_elems);   % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
-        gama = squeeze(gama);
+        error = 1;
+        gama = error*randn(num_elems,Nens);   % Gaussian observation perturbation, Generate values from a normal distribution with mean 0 and standard deviation 1.
+        
+        
         Obs_cov = (gama * gama') / (Nens - 1);
         Obs_ens = zeros(num_elems, Nens);
         
         % perturbed measurement
         for ens = 1 : Nens
-            Obs_ens(:,ens) = zsq + gama(1);    %% Measurement Ensemble
+            Obs_ens(:,ens) = zsq + gama(:,ens);    %% Measurement Ensemble
         end
         
         % Reshape data into one column
@@ -262,61 +270,117 @@ for itime = 1 : time
         fprintf('Beginning svd calc \n')
         tic;
 
-%                 [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
-%         
-%         
-%                 Xi = diag(S);% singular values
-%         
-%                 nos = length(Xi);
-%         
-%                 for jj = 1 : nos
-%                     if (Xi(jj) < Xi(1) / (10^6))
-%                         Xi(jj) = 0;
-%                     else
-%                         Xi(jj) = 1 / Xi(jj);
-%                     end
-%                 end
-%         
-%                 S = diag(Xi);
-%         
-%         
-%                 fprintf('SVD time: %d calc starting mInverse \n',toc)
-%                 tic;
-%                 mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
-%         
-%                 fprintf('Done with inverse, creating analysis\n')
-%                 % Data Assimilate
-%                 Hresh = Hresh + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * Hresh) );
-        Hresh = Hresh + 0.2*(Obs_ens - H_Map * Hresh);
+        [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
+        
+        
+        Xi = diag(S);% singular values
+        
+        nos = length(Xi);
+        
+        for jj = 1 : nos
+            if (Xi(jj) < Xi(1) / (10^6))
+                Xi(jj) = 0;
+            else
+                Xi(jj) = 1 / Xi(jj);
+            end
+        end
+        
+        S = diag(Xi);
+        
+        
+        fprintf('SVD time: %3.1f seconds. Starting mInverse \n',toc)
 
-        fprintf('Time for inverse+analysis: %d reshaping\n',toc)
         tic;
+        mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
+        
+        fprintf('Done with inverse, creating analysis\n')
+        % Data Assimilate
+        diff = Obs_ens - H_Map * Hresh;
+        
+        Hresh = Hresh + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * Hresh) );
+        mInverse;
+        meaninverse = mean(mean(mInverse))
+        rangeinverse = mean(range(mInverse))
+        %         Hresh = Hresh + 0.2*(Obs_ens - H_Map * Hresh);
+        fprintf('Time for inverse+analysis: %d reshaping\n',toc)
+        
         
         % Reshape H back to 3 dimensions!!!
         H = reshape(Hresh,xDim,yDim,Nens);
+        Obs_ens_resh = reshape(Obs_ens,xDim,yDim,Nens);
+        
         
         B = zeros(xDim+2,yDim+2,Nens);
         B(2:xDim+1,2:yDim+1,:)= H;
         H = B;
         asdf = H - Hpre;
-        for x = 1:xDim+2
-            for y = 1:yDim+2
-                if asdf > 1
-                    fprintf('x: %d, y: %d',asdf(x,y))
+        for ense = 1:Nens-1
+            %                      for y = 1:yDim+2
+            %                          if asdf > 1
+            %                              fprintf('x: %d, y: %d',asdf(x,y))
+            %                          end
+            %                      end
+            x = 16;
+            y = 16;
+            fprintf(' pre: %2.5f obs_ens: %2.5f  post: %2.5f  \n',...
+                Hpre(x,y,ense),Obs_ens_resh(x,y,ense),H(x,y,ense))
+            fprintf('obs values: %2.5f \n',ObsValuesH(itime,x-1,y-1))
+            
+        end
+
+        fprintf('Done with DA. \n')
+        
+        %% Create normal distribution of pre and post
+        %Store hist of H after DA
+        for q = 1:xDim
+            for p = 1:xDim
+                %                 hist_post(itime,q,p,:) = hist(H(q+1,p+1,:)); % hist on third dim, i.e. ensembles
+                minV = min(min(H(q+1,p+1,:),Hpre(q+1,p+1,:)));
+                maxV = max(max(H(q+1,p+1,:),Hpre(q+1,p+1,:)));
+                
+                x_vals = linspace(minV,maxV,hist_size);
+                
+                % Store pdf x coordinates to plot on singple graph
+                
+                pd1 = fitdist(squeeze(Hpre(q+1,p+1,:)), 'Normal');
+                
+                pdfs_prior(itime/obs_freq,q,p,:) = pdf(pd1,x_vals);
+                
+                pd2 = fitdist(squeeze(H(q+1,p+1,:)), 'Normal');
+                pdfs_post(itime/obs_freq,q,p,:) = pdf(pd2,x_vals);
+                if p == 15 && q == 15
+                    fprintf('Range pre: %d, range post %d',....
+                        range(Hpre(q+1,q+1,:)),range(H(q+1,q+1,:)))
+                    squeeze(Hpre(q+1,p+1,:))
+                    squeeze(H(q+1,p+1,:))
+                    x_vals_location = x_vals;
+                    size(minV:(maxV-minV)/(Nens-1):maxV)
+                    pdf_coords(itime/obs_freq,:) = minV:(maxV-minV)/(Nens-1):maxV;
+                    pd1
+                    pd2
                 end
+                
             end
         end
-        
+        %% Plot pre and post distributions
+
         figure(1)
-        plot(x_vals,squeeze(pdfs_prior(itime/obs_freq,16,16,:)),'b',x_vals,squeeze(pdfs_post(itime/obs_freq,16,16,:)),'r', 'LineWidth', 2)
+        waterfall_data_pre(itime/obs_freq,:) = squeeze(pdfs_prior(itime/obs_freq,16,16,:));
+        waterfall_data_post(itime/obs_freq,:) = squeeze(pdfs_post(itime/obs_freq,16,16,:));
+        
+        x_vals
+        squeeze(pdfs_prior(itime/obs_freq,16,16,:))
+        squeeze(pdfs_post(itime/obs_freq,16,16,:))
+        
+        plot( x_vals_location,squeeze(pdfs_prior(itime/obs_freq,16,16,:)),'b', x_vals_location,squeeze(pdfs_post(itime/obs_freq,16,16,:)),'r', 'LineWidth', 2)
         legend('PDF prior DA','PDF post DA')
         title('Probability Density function before and after DA', 'fontsize', 20, 'fontweight', ...
             'bold');
-        ylabel('likelyhood', 'fontsize', 15, 'fontweight', 'bold');
+        ylabel('probability', 'fontsize', 15, 'fontweight', 'bold');
         xlabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
-        name=['Data/fig',num2str(itime/obs_freq),'.png']; 
+        name=['Data/fig',num2str(itime/obs_freq),'.png'];
         saveas(gca,name);
-%         figure('units','normalized','outerposition',[0 0 1 1])
+        %         figure('units','normalized','outerposition',[0 0 1 1])
     end
     %% Calc Error
     for q = 1:xDim
@@ -338,15 +402,15 @@ for itime = 1 : time
     test_H_mean(itime)  = mean(H(16,16,:));
     test_H(itime)  = H(16,16,Nens);
     
-%     C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
-%     %     set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
-%     %     set(top,'string',sprintf('step = %d',itime))
-%     drawnow
+    C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
+    %     set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
+    %     set(top,'string',sprintf('step = %d',itime))
+    drawnow
     
     
     %% Check distribution
     
-    if(true && itime == 1)
+    if(false && itime == 1)%true to check variation of initial droplet
         check_std_dev(std_dev,center,max_vals)
     end
 end
@@ -387,11 +451,11 @@ save('Data/var_EnKF.mat','var_array');
 %     'bold');
 % xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
 % ylabel('RMSE', 'fontsize', 15, 'fontweight', 'bold');
-% 
+%
 % Obs_point = ObsValuesH(xtime,16,16);
-% 
-% 
-% 
+%
+%
+%
 % figure(3)
 % plot(xtime,test_H_mean,'b',xtime,Obs_point,'r',markers,test_H_mean(markers),'b*') %,'LineWidth',1 ymarkers,test_H_mean(ymarkers),'m'
 % legend('Mean Height of Ensemble','Observed Height','DA')
@@ -401,7 +465,7 @@ save('Data/var_EnKF.mat','var_array');
 %     'bold');
 % xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
 % ylabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
-% 
+%
 % figure(4)
 % plot(xtime,test_H,'b',xtime,Obs_point,'r',markers,test_H(markers),'b*') % ,'LineWidth',1
 % legend('Rand Height of Ensemble member','Observed Height','DA')
@@ -410,7 +474,23 @@ save('Data/var_EnKF.mat','var_array');
 % xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
 % ylabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
 
+y_coords = zeros(time/obs_freq,Nens);
+for i = 1 : time/obs_freq
+    y_coords(i,:) = i;
+end
+
+
+figure(4)
+waterfall(pdf_coords,y_coords,squeeze(pdfs_prior(:,16,16,:)))
+legend('Height','Observation', 'Probability')
+title('Pdfs prior')
+
 figure(5)
+waterfall(pdf_coords,y_coords,squeeze(pdfs_post(:,16,16,:)))
+legend('Height','Observation', 'Probability')
+title('Pdfs post')
+
+figure(6)
 plot(markers,distance,'b-*','LineWidth',2)
 title('Distance between hists prior and post DA', 'fontsize', 20, 'fontweight', ...
     'bold');

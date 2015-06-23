@@ -97,20 +97,25 @@ temp2 = zeros(Nens,xDim,yDim);
 %% variables for pdfs
 
 % Nbins = 10;
+DA_num = 0;
+DA_deff_size = time/obs_freq;
+DA_curr_size = DA_deff_size;
+DA_loc = zeros(DA_deff_size);
 
 markers = 1:obs_freq:time;
 
-pdf_coords = zeros(size(markers,2),xDim,yDim, Nens);
-distance_R = zeros(size(markers,2),1);
-distance_L = zeros(size(markers,2),1);
+
+pdf_coords = zeros(DA_deff_size, Nens);
+distance_R = zeros(DA_deff_size,1);
+distance_L = zeros(DA_deff_size,1);
 hist_size = Nens;
-waterfall_data_pre = zeros(size(markers,1),hist_size);
-waterfall_data_post = zeros(size(markers,1),hist_size);
+waterfall_data_pre = zeros(DA_curr_size,hist_size);
+waterfall_data_post = zeros(DA_curr_size,hist_size);
 % hist_prior = zeros(time,xDim,yDim,Nens);
 % hist_post= zeros(time,xDim,yDim,Nens);
 
-pdfs_prior = zeros(time/obs_freq,xDim,yDim,hist_size);
-pdfs_post = zeros(time/obs_freq,xDim,yDim,hist_size);
+pdfs_prior = zeros(DA_curr_size,xDim,yDim,hist_size);
+pdfs_post = zeros(DA_curr_size,xDim,yDim,hist_size);
 
 
 %% Init. graphics
@@ -227,6 +232,12 @@ for itime = 1 : time
     %% Perform DA every obs_freq runs
     if mod(itime,obs_freq) == 0
         
+        DA_num = DA_num + 1;
+        if DA_num > DA_curr_size
+            DA_curr_size = DA_curr_size + 1;
+            %maybe reallocate
+        end
+        DA_loc(DA_num) = itime;
         
         tic;
         fprintf('Starting DA at time: %d \n', itime)
@@ -337,16 +348,13 @@ for itime = 1 : time
                 
                 pd1 = fitdist(squeeze(Hpre(q+1,p+1,:)), 'Normal');
                 
-                pdfs_prior(itime/obs_freq,q,p,:) = pdf(pd1,x_vals);
+                pdfs_prior(DA_num,q,p,:) = pdf(pd1,x_vals);
                 
-                pd2 = fitdist(squeeze(H(q+1,p+1,:)), 'Normal');
-                pdfs_post(itime/obs_freq,q,p,:) = pdf(pd2,x_vals);
-                
+                pd2 = fitdist(squeeze(H(q+1,p+1,:)), 'Normal');         
                 if maxV ~= minV
-                    pdf_coords(itime/obs_freq,q,p,:) = minV:(maxV-minV)/(Nens-1):maxV;
+                    pdf_coords(DA_num,q,p,:) = minV:(maxV-minV)/(Nens-1):maxV;
                 end
 
-               
                 if p == 15 && q == 15
                     fprintf('Range pre: %d, range post %d',....
                         range(Hpre(q+1,q+1,:)),range(H(q+1,q+1,:)))
@@ -354,9 +362,7 @@ for itime = 1 : time
                     squeeze(H(q+1,p+1,:))
                     x_vals_location = x_vals;
                     size(minV:(maxV-minV)/(Nens-1):maxV)
-%                     pdf_coords(itime/obs_freq,:) = minV:(maxV-minV)/(Nens-1):maxV;
-%                     pd1
-%                     pd2
+
                 end
                 
             end
@@ -364,20 +370,20 @@ for itime = 1 : time
         %% Plot pre and post distributions
 
         figure(1)
-        waterfall_data_pre(itime/obs_freq,:) = squeeze(pdfs_prior(itime/obs_freq,16,16,:));
-        waterfall_data_post(itime/obs_freq,:) = squeeze(pdfs_post(itime/obs_freq,16,16,:));
+        waterfall_data_pre(DA_num,:) = squeeze(pdfs_prior(DA_num,16,16,:));
+        waterfall_data_post(DA_num,:) = squeeze(pdfs_post(DA_num,16,16,:));
         
         x_vals
-        squeeze(pdfs_prior(itime/obs_freq,16,16,:))
-        squeeze(pdfs_post(itime/obs_freq,16,16,:))
+        squeeze(pdfs_prior(DA_num,16,16,:))
+        squeeze(pdfs_post(DA_num,16,16,:))
         
-        plot( x_vals_location,squeeze(pdfs_prior(itime/obs_freq,16,16,:)),'b', x_vals_location,squeeze(pdfs_post(itime/obs_freq,16,16,:)),'r', 'LineWidth', 2)
+        plot( x_vals_location,squeeze(pdfs_prior(DA_num,16,16,:)),'b', x_vals_location,squeeze(pdfs_post(DA_num,16,16,:)),'r', 'LineWidth', 2)
         legend('PDF prior DA','PDF post DA')
         title('Probability Density function before and after DA', 'fontsize', 20, 'fontweight', ...
             'bold');
         ylabel('probability', 'fontsize', 15, 'fontweight', 'bold');
         xlabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
-        name=['Data/fig',num2str(itime/obs_freq),'.png'];
+        name=['Data/fig',num2str(DA_num),'.png'];
         saveas(gca,name);
         %         figure('units','normalized','outerposition',[0 0 1 1])
     end
@@ -423,9 +429,9 @@ for i = 1 : time
 end
 
 count = 1;
-for i = obs_freq : obs_freq : time
-    x1 = squeeze((pdfs_post(i/obs_freq,16,16,:)))';
-    x2 = squeeze((pdfs_prior(i/obs_freq,16,16,:)))';
+for i = 1:DA_num
+    x1 = squeeze((pdfs_post(i,16,16,:)))';
+    x2 = squeeze((pdfs_prior(i,16,16,:)))';
     KLDiv(x1,x2)
     distance_R(count) = KLDiv(x1,x2);
     distance_L(count) = KLDiv(x2,x1);
@@ -448,8 +454,8 @@ end
 % xtime = 1:time;
 
 
-y_coords = zeros(time/obs_freq,Nens);
-for i = 1 : time/obs_freq
+y_coords = zeros(DA_num,Nens);
+for i = 1 : DA_num
     y_coords(i,:) = i;
 end
 
@@ -484,7 +490,7 @@ hold off
 % title('Pdfs post')
 
 figure(6)
-plot(markers,distance_R,'b-*',markers,distance_L,'r-+','LineWidth',2,'LineSmoothing','on')
+plot(DA_loc,distance_R,'b-*',markers,distance_L,'r-+','LineWidth',2,'LineSmoothing','on')
 title('Distance between hists prior and post DA', 'fontsize', 20, 'fontweight', ...
     'bold');
 legend('Distance Right', 'Distance Left');

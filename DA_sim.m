@@ -3,7 +3,7 @@ close all
 clc
 
 
-% WATER WAVE
+%% WATER WAVE
 % 2D Shallow Water Model
 %
 % Lax-Wendroff finite difference method.
@@ -100,8 +100,9 @@ temp2 = zeros(Nens,xDim,yDim);
 
 markers = 1:obs_freq:time;
 
-pdf_coords = zeros(size(markers,1), Nens);
-distance = zeros(size(markers,1),1);
+pdf_coords = zeros(size(markers,2),xDim,yDim, Nens);
+distance_R = zeros(size(markers,2),1);
+distance_L = zeros(size(markers,2),1);
 hist_size = Nens;
 waterfall_data_pre = zeros(size(markers,1),hist_size);
 waterfall_data_post = zeros(size(markers,1),hist_size);
@@ -345,6 +346,12 @@ for itime = 1 : time
                 
                 pd2 = fitdist(squeeze(H(q+1,p+1,:)), 'Normal');
                 pdfs_post(itime/obs_freq,q,p,:) = pdf(pd2,x_vals);
+                
+                if maxV ~= minV
+                    pdf_coords(itime/obs_freq,q,p,:) = minV:(maxV-minV)/(Nens-1):maxV;
+                end
+
+               
                 if p == 15 && q == 15
                     fprintf('Range pre: %d, range post %d',....
                         range(Hpre(q+1,q+1,:)),range(H(q+1,q+1,:)))
@@ -352,9 +359,9 @@ for itime = 1 : time
                     squeeze(H(q+1,p+1,:))
                     x_vals_location = x_vals;
                     size(minV:(maxV-minV)/(Nens-1):maxV)
-                    pdf_coords(itime/obs_freq,:) = minV:(maxV-minV)/(Nens-1):maxV;
-                    pd1
-                    pd2
+%                     pdf_coords(itime/obs_freq,:) = minV:(maxV-minV)/(Nens-1):maxV;
+%                     pd1
+%                     pd2
                 end
                 
             end
@@ -423,7 +430,8 @@ for i = obs_freq : obs_freq : time
     x1 = squeeze((pdfs_post(i/obs_freq,16,16,:)))';
     x2 = squeeze((pdfs_prior(i/obs_freq,16,16,:)))';
     KLDiv(x1,x2)
-    distance(count) = KLDiv(x1,x2)
+    distance_R(count) = KLDiv(x1,x2);
+    distance_L(count) = KLDiv(x2,x1);
     count = count + 1;
 end
 
@@ -442,46 +450,48 @@ end
 %
 % Obs_point = ObsValuesH(xtime,16,16);
 % xtime = 1:time;
-%
-%
-% figure(3)
-% plot(xtime,test_H_mean,'b',xtime,Obs_point,'r',markers,test_H_mean(markers),'b*') %,'LineWidth',1 ymarkers,test_H_mean(ymarkers),'m'
-% legend('Mean Height of Ensemble','Observed Height','DA')
-% legend
-% title('')
-% title('Mean Height of Ensemble compared to observation (at single point)', 'fontsize', 20, 'fontweight', ...
-%     'bold');
-% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
-% ylabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
-%
-% figure(4)
-% plot(xtime,test_H,'b',xtime,Obs_point,'r',markers,test_H(markers),'b*') % ,'LineWidth',1
-% legend('Rand Height of Ensemble member','Observed Height','DA')
-% title('Random ensemble member height compared to observation (at single point)', 'fontsize', 20, 'fontweight', ...
-%     'bold');
-% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
-% ylabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
+
 
 y_coords = zeros(time/obs_freq,Nens);
 for i = 1 : time/obs_freq
     y_coords(i,:) = i;
 end
 
+% C1 = colormap(hsv);
+% C2 = colormap(bone);
+
+size(pdf_coords)
+size(y_coords)
+size(squeeze(pdfs_prior(:,16,16,:)))
+
 
 figure(4)
-waterfall(pdf_coords,y_coords,squeeze(pdfs_prior(:,16,16,:)))
-legend('Height','Observation', 'Probability')
-title('Pdfs prior')
+ for q = 1:xDim
+        for p = 1:xDim
+            if max(squeeze(pdfs_prior(:,q,p,:))) < 100
+waterfall(squeeze(pdf_coords(:,q,p,:)),y_coords,squeeze(pdfs_prior(:,q,p,:)))
+hold on
+            end
+        end
+ end
+% waterfall(pdf_coords,y_coords,squeeze(pdfs_post(:,16,16,:)))
+title('Pdfs Prior and Post DA', 'fontsize', 20, 'fontweight', ...
+    'bold')
+xlabel('height', 'fontsize', 15, 'fontweight', 'bold');
+ylabel('time', 'fontsize', 15, 'fontweight', 'bold');
+zlabel('probability', 'fontsize', 15, 'fontweight', 'bold');
+hold off
 
-figure(5)
-waterfall(pdf_coords,y_coords,squeeze(pdfs_post(:,16,16,:)))
-legend('Height','Observation', 'Probability')
-title('Pdfs post')
+% figure(5)
+% waterfall(pdf_coords,y_coords,squeeze(pdfs_post(:,16,16,:)))
+% legend('Height','Observation', 'Probability')
+% title('Pdfs post')
 
 figure(6)
-plot(markers,distance,'b-*','LineWidth',2)
+plot(markers,distance_R,'b-*',markers,distance_L,'r-+','LineWidth',2,'LineSmoothing','on')
 title('Distance between hists prior and post DA', 'fontsize', 20, 'fontweight', ...
     'bold');
+legend('Distance Right', 'Distance Left');
 xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
 ylabel('distance/divergence', 'fontsize', 15, 'fontweight', 'bold');
 

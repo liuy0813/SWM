@@ -318,21 +318,11 @@ for itime = 1 : time
         B = zeros(xDim+2,yDim+2,Nens);
         B(2:xDim+1,2:yDim+1,:)= H;
         H = B;
-        %         asdf = H - Hpre;
-        for ense = 1:Nens-1
-            %                      for y = 1:yDim+2
-            %                          if asdf > 1
-            %                              fprintf('x: %d, y: %d',asdf(x,y))
-            %                          end
-            %                      end
-            x = 16;
-            y = 16;
-            fprintf(' pre: %2.5f obs_ens: %2.5f  post: %2.5f  \n',...
-                Hpre(x,y,ense),Obs_ens_resh(x,y,ense),H(x,y,ense))
-            fprintf('obs values: %2.5f \n',ObsValuesH(itime,x-1,y-1))
-            
-        end
-
+        x = 16;
+        y = 16;
+        fprintf(' pre: %2.5f obs_ens: %2.5f  post: %2.5f  \n',...
+            Hpre(x,y,:),Obs_ens_resh(x,y,:),H(x,y,:))
+        fprintf('obs values: %2.5f \n',ObsValuesH(itime,x-1,y-1))
         fprintf('Done with DA. \n')
         
         %% Create normal distribution of pre and post

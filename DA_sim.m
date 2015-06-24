@@ -98,24 +98,24 @@ temp2 = zeros(Nens,xDim,yDim);
 
 % Nbins = 10;
 DA_num = 0;
-DA_deff_size = time/obs_freq;
+DA_deff_size = floor(time/obs_freq);
 DA_curr_size = DA_deff_size;
-DA_loc = zeros(DA_deff_size);
+DA_loc = zeros(1,DA_deff_size);
 
 markers = 1:obs_freq:time;
 
 
-pdf_coords = zeros(DA_deff_size, Nens);
+pdf_coords = zeros(DA_deff_size, xDim, yDim, Nens);
 distance_R = zeros(DA_deff_size,1);
 distance_L = zeros(DA_deff_size,1);
 hist_size = Nens;
-waterfall_data_pre = zeros(DA_curr_size,hist_size);
-waterfall_data_post = zeros(DA_curr_size,hist_size);
+waterfall_data_pre = zeros(DA_deff_size,hist_size);
+waterfall_data_post = zeros(DA_deff_size,hist_size);
 % hist_prior = zeros(time,xDim,yDim,Nens);
 % hist_post= zeros(time,xDim,yDim,Nens);
 
-pdfs_prior = zeros(DA_curr_size,xDim,yDim,hist_size);
-pdfs_post = zeros(DA_curr_size,xDim,yDim,hist_size);
+pdfs_prior = zeros(DA_deff_size,xDim,yDim,hist_size);
+pdfs_post = zeros(DA_deff_size,xDim,yDim,hist_size);
 
 
 %% Init. graphics
@@ -237,7 +237,7 @@ for itime = 1 : time
             DA_curr_size = DA_curr_size + 1;
             %maybe reallocate
         end
-        DA_loc(DA_num) = itime;
+        DA_loc(1,DA_num) = itime;
         
         tic;
         fprintf('Starting DA at time: %d \n', itime)
@@ -351,6 +351,8 @@ for itime = 1 : time
                 pdfs_prior(DA_num,q,p,:) = pdf(pd1,x_vals);
                 
                 pd2 = fitdist(squeeze(H(q+1,p+1,:)), 'Normal');         
+                pdfs_post(DA_num,q,p,:) = pdf(pd2,x_vals);
+                
                 if maxV ~= minV
                     pdf_coords(DA_num,q,p,:) = minV:(maxV-minV)/(Nens-1):maxV;
                 end
@@ -432,7 +434,7 @@ count = 1;
 for i = 1:DA_num
     x1 = squeeze((pdfs_post(i,16,16,:)))';
     x2 = squeeze((pdfs_prior(i,16,16,:)))';
-    KLDiv(x1,x2)
+    KLDIV_HERE = KLDiv(x1,x2)
     distance_R(count) = KLDiv(x1,x2);
     distance_L(count) = KLDiv(x2,x1);
     count = count + 1;
@@ -490,7 +492,8 @@ hold off
 % title('Pdfs post')
 
 figure(6)
-plot(DA_loc,distance_R,'b-*',markers,distance_L,'r-+','LineWidth',2,'LineSmoothing','on')
+DA_loc
+plot(DA_loc,distance_R,'b-*',DA_loc,distance_L,'r-+','LineWidth',2,'LineSmoothing','on')
 title('Distance between hists prior and post DA', 'fontsize', 20, 'fontweight', ...
     'bold');
 legend('Distance Right', 'Distance Left');

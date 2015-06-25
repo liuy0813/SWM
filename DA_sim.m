@@ -1,4 +1,4 @@
-function DA_sim(Nens,time, obs_freq) %Drop_height, time
+function DA_sim(Nens,time, deff_da_freq) %Drop_height, time
 close all
 clc
 
@@ -33,8 +33,8 @@ clc
 %% Deffault arguments
 if nargin == 0
     Nens = 20;
-    time = 200;
-    obs_freq = 50;
+    time = 500;
+    deff_da_freq = 50;
 end
 fprintf('Running on %d ensemble size, for %d time\n',Nens,time)
 
@@ -98,11 +98,13 @@ temp2 = zeros(Nens,xDim,yDim);
 
 % Nbins = 10;
 DA_num = 0;
-DA_deff_size = floor(time/obs_freq);
+curr_da_freq = deff_da_freq;
+DA_deff_size = floor(time/deff_da_freq);
 DA_curr_size = DA_deff_size;
 DA_loc = zeros(1,DA_deff_size);
+avg_div = zeros(DA_deff_size,1);
 
-markers = 1:obs_freq:time;
+markers = 1:deff_da_freq:time;
 
 
 pdf_coords = zeros(DA_deff_size, xDim, yDim, Nens);
@@ -229,9 +231,18 @@ for itime = 1 : time
     
     
     
-    %% Perform DA every obs_freq runs
-    if mod(itime,obs_freq) == 0
-        
+    
+    %%Determine if DA is performed
+    do_DA = false;
+    
+    if DA_num > 0 && itime ==  DA_loc(1,DA_num) + curr_da_freq
+        do_DA = true;
+    elseif DA_num == 0 && itime == curr_da_freq
+        do_DA = true;
+    end
+    
+    if do_DA
+        %%Perform DA
         DA_num = DA_num + 1;
         if DA_num > DA_curr_size
             DA_curr_size = DA_curr_size + 1;
@@ -243,7 +254,7 @@ for itime = 1 : time
         fprintf('Starting DA at time: %d \n', itime)
         % Observations at the end of the time interval
         
-
+        
         z = squeeze(ObsValuesH(itime, :,:))'; %check itime is properly done
         zsq = squeeze(reshape(z,xDim*yDim,1));
         
@@ -278,7 +289,7 @@ for itime = 1 : time
         %Do svd calc for inverse - takes most time of all assimilation
         fprintf('Beginning svd calc \n')
         tic;
-
+        
         [Uni_mat_U, S, Uni_mat_V] = svd(M);   % single value decomposition
         
         
@@ -298,7 +309,7 @@ for itime = 1 : time
         
         
         fprintf('SVD time: %3.1f seconds. Starting mInverse \n',toc)
-
+        
         tic;
         mInverse = Uni_mat_V * S * Uni_mat_U';    % M inverse = V * inv(S) * U';
         
@@ -306,9 +317,9 @@ for itime = 1 : time
         %% Data Assimilate
         %         diff = Obs_ens - H_Map * Hresh;
         
-         % Inflation code
-%         inf_factor = 1.5;
-%         Ens_cov = Ens_cov * inf_factor;
+        % Inflation code
+        %         inf_factor = 1.5;
+        %         Ens_cov = Ens_cov * inf_factor;
         
         Hresh = Hresh + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * Hresh) );
         %         mInverse;
@@ -335,7 +346,8 @@ for itime = 1 : time
         fprintf('Done with DA. \n')
         
         %% Create normal distribution of pre and post
-        %Store hist of H after DA
+        sum = 0;
+        fprintf('Starting to create normal histograms')
         for q = 1:xDim
             for p = 1:xDim
                 %                 hist_post(itime,q,p,:) = hist(H(q+1,p+1,:)); % hist on third dim, i.e. ensembles
@@ -350,13 +362,19 @@ for itime = 1 : time
                 
                 pdfs_prior(DA_num,q,p,:) = pdf(pd1,x_vals);
                 
-                pd2 = fitdist(squeeze(H(q+1,p+1,:)), 'Normal');         
+                pd2 = fitdist(squeeze(H(q+1,p+1,:)), 'Normal');
                 pdfs_post(DA_num,q,p,:) = pdf(pd2,x_vals);
                 
                 if maxV ~= minV
                     pdf_coords(DA_num,q,p,:) = minV:(maxV-minV)/(Nens-1):maxV;
                 end
-
+                x1 = squeeze((pdfs_post(DA_num,x,y,:)))';
+                x2 = squeeze((pdfs_prior(DA_num,x,y,:)))';
+                if any(x1) > 0 && any(x2) > 0
+                    div = KLDiv(x2,x1);
+                    sum = sum + div;
+                end
+                
                 if p == 15 && q == 15
                     fprintf('Range pre: %d, range post %d',....
                         range(Hpre(q+1,q+1,:)),range(H(q+1,q+1,:)))
@@ -364,13 +382,14 @@ for itime = 1 : time
                     squeeze(H(q+1,p+1,:))
                     x_vals_location = x_vals;
                     size(minV:(maxV-minV)/(Nens-1):maxV)
-
+                    
                 end
                 
             end
         end
+        
         %% Plot pre and post distributions
-
+        
         figure(1)
         waterfall_data_pre(DA_num,:) = squeeze(pdfs_prior(DA_num,16,16,:));
         waterfall_data_post(DA_num,:) = squeeze(pdfs_post(DA_num,16,16,:));
@@ -386,8 +405,20 @@ for itime = 1 : time
         ylabel('probability', 'fontsize', 15, 'fontweight', 'bold');
         xlabel('height at point 16,16', 'fontsize', 15, 'fontweight', 'bold');
         name=['Data/fig',num2str(DA_num),'.png'];
-        saveas(gca,name);
+        %saveas(gca,name);
         %         figure('units','normalized','outerposition',[0 0 1 1])
+        
+        avg_div(DA_num) = sum/(xDim*yDim);
+        avg_div(DA_num)
+        if avg_div(DA_num) > 0.5
+            curr_da_freq = ceil(curr_da_freq/2)
+        elseif avg_div(DA_num) < 0.4
+            curr_da_freq = ceil(curr_da_freq*2)
+        end
+        
+        
+        
+        % end of DA
     end
     %% Calc Error
     for q = 1:xDim
@@ -406,10 +437,10 @@ for itime = 1 : time
     %% Update plot
     i = 2:xDim+1;
     j = 2:yDim+1;
-%     test_H_mean(itime)  = mean(H(16,16,:));
-%     test_H(itime)  = H(16,16,Nens);
-%     
-%     C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
+    %     test_H_mean(itime)  = mean(H(16,16,:));
+    %     test_H(itime)  = H(16,16,Nens);
+    %
+    %     C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
     %     set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
     %     set(top,'string',sprintf('step = %d',itime))
     drawnow
@@ -423,6 +454,7 @@ for itime = 1 : time
 end
 disp('Run time.....');
 toc;
+avg_div
 
 
 for i = 1 : time
@@ -434,7 +466,7 @@ count = 1;
 for i = 1:DA_num
     x1 = squeeze((pdfs_post(i,16,16,:)))';
     x2 = squeeze((pdfs_prior(i,16,16,:)))';
-    KLDIV_HERE = KLDiv(x1,x2)
+    
     distance_R(count) = KLDiv(x1,x2);
     distance_L(count) = KLDiv(x2,x1);
     count = count + 1;
@@ -443,7 +475,7 @@ end
 
 %% Plot results and error
 
-% add error bars for variance!!! var of ensemble
+%add error bars for variance!!! var of ensemble
 % figure(2)
 % size(RMSE)
 % plot(xtime,RMSE,'g','LineWidth',1)
@@ -451,7 +483,7 @@ end
 %     'bold');
 % xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
 % ylabel('RMSE', 'fontsize', 15, 'fontweight', 'bold');
-%
+% 
 % Obs_point = ObsValuesH(xtime,16,16);
 % xtime = 1:time;
 
@@ -470,14 +502,14 @@ size(squeeze(pdfs_prior(:,16,16,:)))
 
 
 figure(4)
- for q = 1:xDim
-        for p = 1:xDim
-            if max(squeeze(pdfs_prior(:,q,p,:))) < 100
-waterfall(squeeze(pdf_coords(:,q,p,:)),y_coords,squeeze(pdfs_prior(:,q,p,:)))
-hold on
-            end
+for q = 1:xDim
+    for p = 1:xDim
+        if max(squeeze(pdfs_prior(:,q,p,:))) < 100
+            waterfall(squeeze(pdf_coords(:,q,p,:)),y_coords,squeeze(pdfs_prior(:,q,p,:)))
+            hold on
         end
- end
+    end
+end
 % waterfall(pdf_coords,y_coords,squeeze(pdfs_post(:,16,16,:)))
 title('Pdfs Prior and Post DA', 'fontsize', 20, 'fontweight', ...
     'bold')
@@ -546,20 +578,20 @@ end
 
 %----------------------------------------
 function KL = getKLD(Hpre,H)
- %bins = numbe of ensembles / 3
+%bins = numbe of ensembles / 3
 xDim = size(H,1)-2;
 yDim = size(H,2)-2;
 KLs = zeros(xDim,yDim);
 % for x = 2 : 3
 %     for y = 2 : 3
-        Hpre(16,16,:)
-        H(16,16,:)
-        a = makeHist(Hpre(16,16,:),H(16,16,:));
-        b = makeHist(H(16,16,:),Hpre(16,16,:));
-        a
-        b
-        KLDiv(a,b)
-        KLs(16-1,16-1) = squeeze(KLDiv(b,a));
+Hpre(16,16,:)
+H(16,16,:)
+a = makeHist(Hpre(16,16,:),H(16,16,:));
+b = makeHist(H(16,16,:),Hpre(16,16,:));
+a
+b
+KLDiv(a,b)
+KLs(16-1,16-1) = squeeze(KLDiv(b,a));
 %     end
 % end
 KL = mean(mean(KLs));
@@ -579,7 +611,7 @@ Nens = size(a,1);
 bin_num = floor(Nens/3); % if we have fewer bins the data will be quite spread
 assert( bin_num >= 3,'Below minimum number in ensemble to make histogram');
 %we may want to alter this value
-if minV == maxV 
+if minV == maxV
     fprintf('Making histogram with only one point')
     histo = ones(1,bin_num);
     return
@@ -607,6 +639,11 @@ histo = histA;
 
 end
 
+%-------------------------------------
+function new_freq = get_da_freq(pdf_post, pdf_prior,DA_num, curr_da_freq)
+pdf_post(DA_num,:,:,:)
+
+end
 %-------------------------------------
 function check_std_dev(std_dev, center, max_vals)
 fprintf('Max is %d and min is %d \n',max(max_vals),min(max_vals))

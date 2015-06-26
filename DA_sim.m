@@ -394,10 +394,6 @@ for itime = 1 : time
         waterfall_data_pre(DA_num,:) = squeeze(pdfs_prior(DA_num,16,16,:));
         waterfall_data_post(DA_num,:) = squeeze(pdfs_post(DA_num,16,16,:));
         
-        x_vals
-        squeeze(pdfs_prior(DA_num,16,16,:))
-        squeeze(pdfs_post(DA_num,16,16,:))
-        
         plot( x_vals_location,squeeze(pdfs_prior(DA_num,16,16,:)),'b', x_vals_location,squeeze(pdfs_post(DA_num,16,16,:)),'r', 'LineWidth', 2)
         legend('PDF prior DA','PDF post DA')
         title('Probability Density function before and after DA', 'fontsize', 20, 'fontweight', ...
@@ -409,11 +405,13 @@ for itime = 1 : time
         %         figure('units','normalized','outerposition',[0 0 1 1])
         
         avg_div(DA_num) = sum/(xDim*yDim);
-        avg_div(DA_num)
-        if avg_div(DA_num) > 0.5
-            curr_da_freq = ceil(curr_da_freq/2)
+        
+        DA_amp = 1.5;
+        
+        if avg_div(DA_num) > 0.8
+            curr_da_freq = ceil(curr_da_freq/DA_amp)
         elseif avg_div(DA_num) < 0.4
-            curr_da_freq = ceil(curr_da_freq*2)
+            curr_da_freq = ceil(curr_da_freq*DA_amp)
         end
         
         
@@ -452,17 +450,145 @@ for itime = 1 : time
         check_std_dev(std_dev,center,max_vals)
     end
 end
+
+%% Output runtime
 disp('Run time.....');
 toc;
-avg_div
 
 
-for i = 1 : time
-    RMSE(i) =  mean(mean(RMS_H(i,:,:)));
-    % RMSE(i) =  RMS_H(i,16,16);
+
+
+
+%% Plot Root Mean Square Error
+
+% for i = 1 : time
+%     RMSE(i) =  mean(mean(RMS_H(i,:,:)));
+%     % RMSE(i) =  RMS_H(i,16,16);
+% end
+% obs = 1 : DA_num;
+%
+% figure(2)
+% size(RMSE)
+% plot(obs,RMSE,'g','LineWidth',1)
+% title('RMS Error of Reference Model', 'fontsize', 20, 'fontweight', ...
+%     'bold');
+% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+% ylabel('RMSE', 'fontsize', 15, 'fontweight', 'bold');
+%
+
+
+% Make 2D matrix of number of DA
+y_coords = zeros(DA_num,Nens);
+for i = 1 : DA_num
+    y_coords(i,:) = i;
 end
 
+
+%% PDF PRE
+tic 
+
+figure(1)
+loc_x = [];
+loc_y = [];
+loc_z = [];
+
+fprintf('plotting pre pdf...\n')
+for q = 1:xDim
+    for p = 1:yDim
+        for n = 1 : DA_num
+            if max(squeeze(pdfs_prior(:,q,p,:))) < 100
+                subplot(2,2,1)
+                waterfall(squeeze(pdf_coords(:,q,p,:)),y_coords,squeeze(pdfs_prior(:,q,p,:)))     
+                title('Pdfs Prior DA', 'fontsize', 16, 'fontweight', ...
+                    'bold')
+                xlabel('height', 'fontsize', 12, 'fontweight', 'bold');
+                ylabel('time', 'fontsize', 12, 'fontweight', 'bold');
+                zlabel('probability', 'fontsize', 12, 'fontweight', 'bold');
+                zlim([0 100])
+                hold on
+            end
+            % Store graphed locations
+            if max(squeeze(pdfs_prior(n,q,p,:))) < 100
+                loc_x = [loc_x p];
+                loc_y = [loc_y n];
+                loc_z = [loc_z q];
+            end
+        end
+    end
+end
+hold off
+
+
+subplot(2,2,2);
+plot3(loc_x,loc_y,loc_z,'b+');
+alpha(0.5)
+title('locations prior', 'fontsize', 16, 'fontweight', ...
+    'bold')
+xlabel('x position', 'fontsize', 12, 'fontweight', 'bold');
+ylabel('observation', 'fontsize', 12, 'fontweight', 'bold');
+zlabel('y position', 'fontsize', 12, 'fontweight', 'bold');
+grid on
+xlim([1 64])
+ylim([1 DA_num])
+zlim([1 64])
+
+disp('Run time.....');
+toc;
+%% PDF POST
+tic
+
+loc_x = [];
+loc_y = [];
+loc_z = [];
+
+fprintf('plotting post pdf...\n')
+for q = 1:xDim
+    for p = 1:xDim
+        for n = 1 : DA_num
+            
+            if max(squeeze(pdfs_post(:,q,p,:))) < 100
+                subplot(2,2,3)
+                waterfall(squeeze(pdf_coords(:,q,p,:)),y_coords,squeeze(pdfs_post(:,q,p,:)))
+                title('Pdfs Post DA', 'fontsize', 16, 'fontweight', ...
+                    'bold')
+                xlabel('height', 'fontsize', 12, 'fontweight', 'bold');
+                ylabel('time', 'fontsize', 12, 'fontweight', 'bold');
+                zlabel('probability', 'fontsize', 12, 'fontweight', 'bold');
+                zlim([0 100])
+                hold on
+            end
+            
+            if max(squeeze(pdfs_prior(n,q,p,:))) < 100
+                loc_x = [loc_x p];
+                loc_y = [loc_y n];
+                loc_z = [loc_z q];
+            end
+            
+            
+        end
+    end
+end
+hold off
+
+subplot(2,2,4)
+plot3(loc_x,loc_y,loc_z,'r+');
+alpha(0.5)
+title('locations post prob ', 'fontsize', 16, 'fontweight', ...
+    'bold')
+xlabel('x position', 'fontsize', 12, 'fontweight', 'bold');
+ylabel('observation', 'fontsize', 12, 'fontweight', 'bold');
+zlabel('y position', 'fontsize', 12, 'fontweight', 'bold');
+grid on
+xlim([1 64])
+ylim([1 DA_num])
+zlim([1 64])
+
+disp('Run time.....');
+toc;
+
+%% KLD at point 16,16
 count = 1;
+
 for i = 1:DA_num
     x1 = squeeze((pdfs_post(i,16,16,:)))';
     x2 = squeeze((pdfs_prior(i,16,16,:)))';
@@ -472,65 +598,14 @@ for i = 1:DA_num
     count = count + 1;
 end
 
+figure(2)
 
-%% Plot results and error
-
-%add error bars for variance!!! var of ensemble
-% figure(2)
-% size(RMSE)
-% plot(xtime,RMSE,'g','LineWidth',1)
-% title('RMS Error of Reference Model', 'fontsize', 20, 'fontweight', ...
-%     'bold');
-% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
-% ylabel('RMSE', 'fontsize', 15, 'fontweight', 'bold');
-% 
-% Obs_point = ObsValuesH(xtime,16,16);
-% xtime = 1:time;
-
-
-y_coords = zeros(DA_num,Nens);
-for i = 1 : DA_num
-    y_coords(i,:) = i;
-end
-
-% C1 = colormap(hsv);
-% C2 = colormap(bone);
-
-size(pdf_coords)
-size(y_coords)
-size(squeeze(pdfs_prior(:,16,16,:)))
-
-
-figure(4)
-for q = 1:xDim
-    for p = 1:xDim
-        if max(squeeze(pdfs_prior(:,q,p,:))) < 100
-            waterfall(squeeze(pdf_coords(:,q,p,:)),y_coords,squeeze(pdfs_prior(:,q,p,:)))
-            hold on
-        end
-    end
-end
-% waterfall(pdf_coords,y_coords,squeeze(pdfs_post(:,16,16,:)))
-title('Pdfs Prior and Post DA', 'fontsize', 20, 'fontweight', ...
-    'bold')
-xlabel('height', 'fontsize', 15, 'fontweight', 'bold');
-ylabel('time', 'fontsize', 15, 'fontweight', 'bold');
-zlabel('probability', 'fontsize', 15, 'fontweight', 'bold');
-hold off
-
-% figure(5)
-% waterfall(pdf_coords,y_coords,squeeze(pdfs_post(:,16,16,:)))
-% legend('Height','Observation', 'Probability')
-% title('Pdfs post')
-
-figure(6)
-DA_loc
 plot(DA_loc,distance_R,'b-*',DA_loc,distance_L,'r-+','LineWidth',2,'LineSmoothing','on')
-title('Distance between hists prior and post DA', 'fontsize', 20, 'fontweight', ...
+title('Distance between hists prior and post DA', 'fontsize', 16, 'fontweight', ...
     'bold');
 legend('Distance Right', 'Distance Left');
-xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
-ylabel('distance/divergence', 'fontsize', 15, 'fontweight', 'bold');
+xlabel('time', 'fontsize', 12, 'fontweight', 'bold');
+ylabel('distance/divergence', 'fontsize', 12, 'fontweight', 'bold');
 
 %% Save result for plotting and post-analysis purpose
 filename = 'Data/EnKF_SWM.mat';

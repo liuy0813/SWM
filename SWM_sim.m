@@ -209,21 +209,23 @@ for i = 1 : time
     % RMSE(i) =  RMS_H(i,16,16);
 end
 
+save('Data/no_DA_error.mat','RMSE');
+
 
 %% Plot results and error
 
-markers = 50:50:time;
-size(markers)
-size(RMSE_EnKF(markers)')
-figure(1)
-plot(xtime,RMSE,'r',xtime,RMSE_EnKF,'b',markers,RMSE_EnKF(markers)','b*','LineWidth',1)
-errorbar(markers,RMSE(markers),var_array(markers),'r')
-legend('RMSE Standard','RMSE EnKF','DA','Location','northwest')
-%axis([0 time -0.2 0.5])
-title('Overall RMS Error of Standard vs. EnKF', 'fontsize', 20, 'fontweight', ...
-    'bold');
-xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
-ylabel('RMSE', 'fontsize', 15, 'fontweight', 'bold');
+% markers = 50:50:time;
+% size(markers)
+% size(RMSE_EnKF(markers)')
+% figure(1)
+% plot(xtime,RMSE,'r',xtime,RMSE_EnKF,'b',markers,RMSE_EnKF(markers)','b*','LineWidth',1)
+% errorbar(markers,RMSE(markers),var_array(markers),'r')
+% legend('RMSE Standard','RMSE EnKF','DA','Location','northwest')
+% %axis([0 time -0.2 0.5])
+% title('Overall RMS Error of Standard vs. EnKF', 'fontsize', 20, 'fontweight', ...
+%     'bold');
+% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+% ylabel('RMSE', 'fontsize', 15, 'fontweight', 'bold');
 
 Obs_point = ObsValuesH(xtime,16,16);
 

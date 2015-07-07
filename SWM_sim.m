@@ -227,26 +227,26 @@ save('Data/no_DA_error.mat','RMSE');
 % xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
 % ylabel('RMSE', 'fontsize', 15, 'fontweight', 'bold');
 
-Obs_point = ObsValuesH(xtime,16,16);
-
-
-figure(2)
-plot(xtime,test_H_mean,'b',xtime,Obs_point,'r') %,'LineWidth',1
-legend('Mean Height','Observed Height')
-% axis([0 time 0 5])
-title('STANDARD Compare ObsValuesH to H_mean', 'fontsize', 20, 'fontweight', ...
-    'bold');
-xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
-ylabel('value', 'fontsize', 15, 'fontweight', 'bold');
-
-figure(3)
-plot(xtime,test_H,'b',xtime,Obs_point,'r') % ,'LineWidth',1
-legend('Rand Ens Height','Observed Height')
-% axis([0 time 0 5])
-title('STANDARD Compare ObsValuesH random ensemble member', 'fontsize', 20, 'fontweight', ...
-    'bold');
-xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
-ylabel('value', 'fontsize', 15, 'fontweight', 'bold');
+% Obs_point = ObsValuesH(xtime,16,16);
+% 
+% 
+% figure(2)
+% plot(xtime,test_H_mean,'b',xtime,Obs_point,'r') %,'LineWidth',1
+% legend('Mean Height','Observed Height')
+% % axis([0 time 0 5])
+% title('STANDARD Compare ObsValuesH to H_mean', 'fontsize', 20, 'fontweight', ...
+%     'bold');
+% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+% ylabel('value', 'fontsize', 15, 'fontweight', 'bold');
+% 
+% figure(3)
+% plot(xtime,test_H,'b',xtime,Obs_point,'r') % ,'LineWidth',1
+% legend('Rand Ens Height','Observed Height')
+% % axis([0 time 0 5])
+% title('STANDARD Compare ObsValuesH random ensemble member', 'fontsize', 20, 'fontweight', ...
+%     'bold');
+% xlabel('time', 'fontsize', 15, 'fontweight', 'bold');
+% ylabel('value', 'fontsize', 15, 'fontweight', 'bold');
 end
 
 

@@ -1,9 +1,10 @@
 function compare_error(ens_size, time, da_freq)
 if nargin == 0
     ens_size = 20
-    time = 200
-    da_freq = 50
+    time = 500
+    da_freq = 20
 end
+
 tic
 fprintf('Running static DA')
 tic

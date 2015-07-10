@@ -1,4 +1,4 @@
-function DA_dyn_sim(Nens,time, deff_da_freq) %Drop_height, time
+function DA_dyn_sim(Nens,time, deff_da_freq, DA_amp) %Drop_height, time
 close all
 clc
 
@@ -405,7 +405,7 @@ for itime = 1 : time
         
         avg_div(DA_num) = sum/(xDim*yDim);
         
-        DA_amp = 1.5;
+       
         
         if avg_div(DA_num) > 0.8
             curr_da_freq = ceil(curr_da_freq/DA_amp)

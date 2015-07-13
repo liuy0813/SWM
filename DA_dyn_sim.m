@@ -115,7 +115,7 @@ pdfs_prior = zeros(DA_deff_size,xDim,yDim,hist_size);
 pdfs_post = zeros(DA_deff_size,xDim,yDim,hist_size);
 
 %% Init. graphics
-% [surfplot,top] = initgraphics(xDim);
+ [surfplot,top] = initgraphics(xDim);
 
 %% Init. timer
 
@@ -219,7 +219,9 @@ for itime = 1 : time
             (Ux(i-1,j-1,k).*Vx(i-1,j-1,k)./Hx(i-1,j-1,k))) ...
             - (dt/dy)*((Vy(i-1,j,k).^2./Hy(i-1,j,k) + g/2*Hy(i-1,j,k).^2) - ...
             (Vy(i-1,j-1,k).^2./Hy(i-1,j-1,k) + g/2*Hy(i-1,j-1,k).^2));
+       twopioverate=.0005;
         
+        H(:,:,k) = H(:,:,k) + twopioverate*randn(xDim+2,yDim+2);
     end
     
     %% Determine if DA is performed
@@ -375,7 +377,7 @@ for itime = 1 : time
 %                     squeeze(Hpre(q+1,p+1,:))
 %                     squeeze(H(q+1,p+1,:))
                     x_vals_location = x_vals;
-                    size(minV:(maxV-minV)/(Nens-1):maxV)
+                    size(minV:(maxV-minV)/(Nens-1):maxV);
                     
                 end
                 
@@ -407,11 +409,13 @@ for itime = 1 : time
         
         DA_amp = 1.5;
         
-        if avg_div(DA_num) > 0.8
-            curr_da_freq = ceil(curr_da_freq/DA_amp)
-        elseif avg_div(DA_num) < 0.4
-            curr_da_freq = ceil(curr_da_freq*DA_amp)
+        if avg_div(DA_num) > 1.5
+            curr_da_freq = ceil(curr_da_freq/DA_amp);
+        elseif avg_div(DA_num) < 1
+            curr_da_freq = ceil(curr_da_freq*DA_amp);
         end
+        fprintf('KLD: %1.3f new freq: %3.0f \n',avg_div(DA_num),curr_da_freq)
+        
         
         
         
@@ -436,12 +440,12 @@ for itime = 1 : time
     %% Update plot
     i = 2:xDim+1;
     j = 2:yDim+1;
-    %     test_H_mean(itime)  = mean(H(16,16,:));
-    %     test_H(itime)  = H(16,16,Nens);
-    %
-    %     C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
-    %     set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
-    %     set(top,'string',sprintf('step = %d',itime))
+        test_H_mean(itime)  = mean(H(16,16,:));
+        test_H(itime)  = H(16,16,Nens);
+    
+        C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
+        set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
+        set(top,'string',sprintf('step = %d',itime))
     drawnow
     
     %% Check distribution
@@ -627,7 +631,7 @@ end
 % ------------------------------------
 function [surfplot,top] = initgraphics(n)
 
-% INITGRAPHICS  Initialize graphics for waterwave.
+%% INITGRAPHICS  Initialize graphics for waterwave.
 % [surfplot,top,start,stop] = initgraphics(n)
 % returns handles to a surface plot, its title, and two uicontrol toggles.
 

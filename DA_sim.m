@@ -115,7 +115,7 @@ pdfs_prior = zeros(DA_deff_size,xDim,yDim,hist_size);
 pdfs_post = zeros(DA_deff_size,xDim,yDim,hist_size);
 
 %% Init. graphics
-% [surfplot,top] = initgraphics(xDim);
+ [surfplot,top] = initgraphics(xDim);
 
 %% Init. timer
 
@@ -219,7 +219,9 @@ for itime = 1 : time
             (Ux(i-1,j-1,k).*Vx(i-1,j-1,k)./Hx(i-1,j-1,k))) ...
             - (dt/dy)*((Vy(i-1,j,k).^2./Hy(i-1,j,k) + g/2*Hy(i-1,j,k).^2) - ...
             (Vy(i-1,j-1,k).^2./Hy(i-1,j-1,k) + g/2*Hy(i-1,j-1,k).^2));
+        twopioverate=.0005;
         
+        H(:,:,k) = H(:,:,k) + twopioverate*randn(xDim+2,yDim+2);
     end
     
     %% Determine if DA is performed
@@ -413,6 +415,8 @@ for itime = 1 : time
         % end of DA
         
     end
+  
+    
     
     %% Calc Error
     for q = 1:xDim
@@ -431,12 +435,12 @@ for itime = 1 : time
     %% Update plot
     i = 2:xDim+1;
     j = 2:yDim+1;
-    %     test_H_mean(itime)  = mean(H(16,16,:));
-    %     test_H(itime)  = H(16,16,Nens);
-    %
-    %     C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
-    %     set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
-    %     set(top,'string',sprintf('step = %d',itime))
+        test_H_mean(itime)  = mean(H(16,16,:));
+        test_H(itime)  = H(16,16,Nens);
+    
+        C = abs(U(i,j,Nens)) + abs(V(i,j,Nens));  % Color shows momemtum
+        set(surfplot,'zdata',H(i,j,Nens),'cdata',C);
+        set(top,'string',sprintf('step = %d',itime))
     drawnow
     
     %% Check distribution
@@ -446,6 +450,10 @@ for itime = 1 : time
     end
     
 end
+
+
+
+
 
 %% Output runtime
 disp('Run time.....');

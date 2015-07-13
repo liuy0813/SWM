@@ -2,7 +2,7 @@ function compare_error(ens_size, time, da_freq)
 if nargin == 0
     ens_size = 20
     time = 500
-    da_freq = 20
+    da_freq = 50
 end
 
 tic

@@ -12,8 +12,7 @@ clc
 % Plot title shows t = simulated time and tv = a measure of total variation.
 % An exact solution to the conservation law would have constant tv.
 % Lax-Wendroff produces nonphysical oscillations and increasing tv.
-%
-%  Author:
+%%  Author:
 %
 %    Cleve Moler
 %
@@ -219,9 +218,10 @@ for itime = 1 : time
             (Ux(i-1,j-1,k).*Vx(i-1,j-1,k)./Hx(i-1,j-1,k))) ...
             - (dt/dy)*((Vy(i-1,j,k).^2./Hy(i-1,j,k) + g/2*Hy(i-1,j,k).^2) - ...
             (Vy(i-1,j-1,k).^2./Hy(i-1,j-1,k) + g/2*Hy(i-1,j-1,k).^2));
-        twopioverate=.0005;
+
+        model_error = 0.001;
+        H(:,:,k) = H(:,:,k) + model_error*randn(xDim+2,yDim+2);
         
-        H(:,:,k) = H(:,:,k) + twopioverate*randn(xDim+2,yDim+2);
     end
     
     %% Determine if DA is performed
@@ -312,8 +312,8 @@ for itime = 1 : time
         %         diff = Obs_ens - H_Map * Hresh;
         
         % Inflation code
-        %         inf_factor = 1.5;
-        %         Ens_cov = Ens_cov * inf_factor;
+%                 inf_factor = 1.5;
+%                 Ens_cov = Ens_cov * inf_factor;
         
         Hresh = Hresh + Ens_cov * H_Map' * ( mInverse * (Obs_ens - H_Map * Hresh) );
         %         mInverse;

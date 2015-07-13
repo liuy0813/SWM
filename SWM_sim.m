@@ -166,7 +166,8 @@ for itime = 1 : time
             - (dt/dy)*((Vy(i-1,j,k).^2./Hy(i-1,j,k) + g/2*Hy(i-1,j,k).^2) - ...
             (Vy(i-1,j-1,k).^2./Hy(i-1,j-1,k) + g/2*Hy(i-1,j-1,k).^2));
         
-        twopioverate=.0005;
+        model_error = 0.001;
+        H(:,:,k) = H(:,:,k) + model_error*randn(xDim+2,yDim+2);
         
 %         H(:,:,k) = H(:,:,k) + twopioverate*randn(Nvar+2,Nvar+2);
 
